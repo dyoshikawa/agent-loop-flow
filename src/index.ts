@@ -3,7 +3,12 @@
  */
 
 // Flow schema and types
-export { FlowDefinitionSchema, StepSchema, SkillStepSchema } from "./flow/flow-schema.js";
+export {
+  FlowDefinitionSchema,
+  StepSchema,
+  SkillStepSchema,
+  ToolTypeSchema,
+} from "./flow/flow-schema.js";
 export type {
   FlowDefinition,
   Step,
@@ -11,6 +16,7 @@ export type {
   ConditionalStep,
   WhileLoopStep,
   ForEachStep,
+  ToolType,
 } from "./flow/flow-schema.js";
 
 // Flow parser

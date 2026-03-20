@@ -5,6 +5,8 @@
   "name": "batch-process",
   "description": "Process multiple files using for-each and while loops",
   "version": "1.0.0",
+  "defaultTool": "opencode",
+  "defaultModel": "github-copilot/claude-opus-4.6",
   "variables": {
     "files": ["src/a.ts", "src/b.ts", "src/c.ts"],
     "retryEnabled": false,

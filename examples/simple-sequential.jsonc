@@ -5,6 +5,8 @@
   "name": "simple-sequential",
   "description": "A simple flow that runs skills in sequence",
   "version": "1.0.0",
+  "defaultTool": "opencode",
+  "defaultModel": "github-copilot/claude-opus-4.6",
   "variables": {
     "targetFile": "src/index.ts",
   },

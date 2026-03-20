@@ -5,6 +5,8 @@
   "name": "conditional-fix",
   "description": "Analyze code and conditionally fix issues",
   "version": "1.0.0",
+  "defaultTool": "opencode",
+  "defaultModel": "github-copilot/claude-opus-4.6",
   "variables": {
     "targetFile": "src/app.ts",
     "hasIssues": true,

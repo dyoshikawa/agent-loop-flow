@@ -1,6 +1,12 @@
 import { z } from "zod/mini";
 
 /**
+ * Schema for the tool type - which CLI tool to use for skill execution.
+ */
+export const ToolTypeSchema = z.union([z.literal("opencode"), z.literal("claude-agent")]);
+export type ToolType = z.infer<typeof ToolTypeSchema>;
+
+/**
  * Schema for a skill step - invokes a single skill with a prompt.
  */
 export const SkillStepSchema = z.object({
@@ -9,6 +15,8 @@ export const SkillStepSchema = z.object({
   skill: z.string().check(z.minLength(1)),
   prompt: z.string().check(z.minLength(1)),
   config: z.optional(z.record(z.string(), z.unknown())),
+  tool: z.optional(ToolTypeSchema),
+  model: z.optional(z.string().check(z.minLength(1))),
 });
 export type SkillStep = z.infer<typeof SkillStepSchema>;
 
@@ -93,6 +101,8 @@ export const FlowDefinitionSchema = z.object({
   name: z.string().check(z.minLength(1)),
   description: z.optional(z.string()),
   version: z.optional(z.string()),
+  defaultTool: ToolTypeSchema,
+  defaultModel: z.string().check(z.minLength(1)),
   variables: z.optional(z.record(z.string(), z.unknown())),
   steps: z.array(StepSchema).check(z.minLength(1)),
 });

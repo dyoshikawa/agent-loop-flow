@@ -12,15 +12,27 @@ import {
 const createMockSkillExecutor = (
   responses?: Record<string, { output: string; success: boolean }>,
 ): SkillExecutor => {
-  return vi.fn(async ({ skill, prompt }) => {
-    if (responses?.[skill]) {
-      return responses[skill];
-    }
-    return {
-      output: `Executed ${skill}: ${prompt}`,
-      success: true,
-    };
-  });
+  return vi.fn(
+    async ({
+      skill,
+      prompt,
+      _tool,
+      _model,
+    }: {
+      skill: string;
+      prompt: string;
+      _tool?: string;
+      _model?: string;
+    }) => {
+      if (responses?.[skill]) {
+        return responses[skill];
+      }
+      return {
+        output: `Executed ${skill}: ${prompt}`,
+        success: true,
+      };
+    },
+  );
 };
 
 describe("interpolateTemplate", () => {
@@ -164,6 +176,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "test-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         steps: [
           { type: "skill", name: "step-1", skill: "skill-a", prompt: "prompt-a" },
           { type: "skill", name: "step-2", skill: "skill-b", prompt: "prompt-b" },
@@ -184,6 +198,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "test-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         variables: { target: "index.ts" },
         steps: [{ type: "skill", name: "step-1", skill: "analyzer", prompt: "Analyze {{target}}" }],
       };
@@ -200,6 +216,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "test-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         variables: { a: "from-flow", b: "from-flow" },
         steps: [{ type: "skill", name: "step-1", skill: "s", prompt: "{{a}} {{b}}" }],
       };
@@ -218,6 +236,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "test-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         steps: [{ type: "skill", name: "step-1", skill: "failing-skill", prompt: "p" }],
       };
 
@@ -235,6 +255,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "test-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         steps: [{ type: "skill", name: "step-1", skill: "s", prompt: "p" }],
       };
 
@@ -251,6 +273,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "cond-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         variables: { enabled: true },
         steps: [
           {
@@ -275,6 +299,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "cond-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         variables: { enabled: false },
         steps: [
           {
@@ -299,6 +325,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "cond-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         variables: {},
         steps: [
           {
@@ -335,6 +363,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "loop-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         steps: [
           {
             type: "while-loop",
@@ -363,6 +393,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "loop-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         steps: [
           {
             type: "while-loop",
@@ -386,6 +418,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "foreach-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         variables: { files: ["a.ts", "b.ts", "c.ts"] },
         steps: [
           {
@@ -412,6 +446,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "foreach-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         variables: {},
         steps: [
           {
@@ -437,6 +473,8 @@ describe("createFlowEngine", () => {
 
       const flow: FlowDefinition = {
         name: "nested-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
         variables: {
           items: ["important", "normal"],
           important: true,
@@ -471,6 +509,68 @@ describe("createFlowEngine", () => {
       expect(result.success).toBe(true);
       // Both "important" and "normal" are truthy strings, so both should be processed
       expect(result.results).toHaveLength(2);
+    });
+  });
+
+  describe("tool and model passing", () => {
+    it("passes default tool and model to executor", async () => {
+      const executor = createMockSkillExecutor();
+      const engine = createFlowEngine({ skillExecutor: executor });
+
+      const flow: FlowDefinition = {
+        name: "tool-test",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
+        steps: [{ type: "skill", name: "step-1", skill: "s", prompt: "p" }],
+      };
+
+      await engine.executeFlow({ flow });
+      expect(executor).toHaveBeenCalledWith(
+        expect.objectContaining({ tool: "opencode", model: "test-model" }),
+      );
+    });
+
+    it("passes step-level tool/model overrides to executor", async () => {
+      const executor = createMockSkillExecutor();
+      const engine = createFlowEngine({ skillExecutor: executor });
+
+      const flow: FlowDefinition = {
+        name: "override-test",
+        defaultTool: "opencode",
+        defaultModel: "default-model",
+        steps: [
+          {
+            type: "skill",
+            name: "step-1",
+            skill: "s",
+            prompt: "p",
+            tool: "claude-agent",
+            model: "custom-model",
+          },
+        ],
+      };
+
+      await engine.executeFlow({ flow });
+      expect(executor).toHaveBeenCalledWith(
+        expect.objectContaining({ tool: "claude-agent", model: "custom-model" }),
+      );
+    });
+
+    it("falls back to defaults when step has no overrides", async () => {
+      const executor = createMockSkillExecutor();
+      const engine = createFlowEngine({ skillExecutor: executor });
+
+      const flow: FlowDefinition = {
+        name: "fallback-test",
+        defaultTool: "claude-agent",
+        defaultModel: "default-model",
+        steps: [{ type: "skill", name: "step-1", skill: "s", prompt: "p" }],
+      };
+
+      await engine.executeFlow({ flow });
+      expect(executor).toHaveBeenCalledWith(
+        expect.objectContaining({ tool: "claude-agent", model: "default-model" }),
+      );
     });
   });
 });

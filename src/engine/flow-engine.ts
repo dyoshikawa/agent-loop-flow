@@ -4,6 +4,7 @@ import type {
   ForEachStep,
   SkillStep,
   Step,
+  ToolType,
   WhileLoopStep,
 } from "../flow/flow-schema.js";
 import { formatError } from "../utils/error.js";
@@ -40,6 +41,8 @@ export type SkillExecutor = (params: {
   prompt: string;
   variables: Record<string, unknown>;
   config?: Record<string, unknown>;
+  tool: ToolType;
+  model: string;
 }) => Promise<{ output: string; success: boolean }>;
 
 /**
@@ -132,11 +135,19 @@ export const createFlowEngine = ({
   const executeSkillStep = async ({
     step,
     variables,
+    defaultTool,
+    defaultModel,
   }: {
     step: SkillStep;
     variables: Record<string, unknown>;
+    defaultTool: ToolType;
+    defaultModel: string;
   }): Promise<SkillResult> => {
-    logger.info(`Executing skill step: ${step.name} (skill: ${step.skill})`);
+    const tool = step.tool ?? defaultTool;
+    const model = step.model ?? defaultModel;
+    logger.info(
+      `Executing skill step: ${step.name} (skill: ${step.skill}, tool: ${tool}, model: ${model})`,
+    );
 
     // Interpolate variables in the prompt
     const interpolatedPrompt = interpolateTemplate({ template: step.prompt, variables });
@@ -147,6 +158,8 @@ export const createFlowEngine = ({
         prompt: interpolatedPrompt,
         variables,
         config: step.config,
+        tool,
+        model,
       });
 
       const result: SkillResult = {
@@ -175,10 +188,14 @@ export const createFlowEngine = ({
     step,
     variables,
     lastResult,
+    defaultTool,
+    defaultModel,
   }: {
     step: ConditionalStep;
     variables: Record<string, unknown>;
     lastResult?: SkillResult;
+    defaultTool: ToolType;
+    defaultModel: string;
   }): Promise<SkillResult[]> => {
     logger.info(`Evaluating condition: ${step.name} (${step.condition})`);
 
@@ -191,11 +208,11 @@ export const createFlowEngine = ({
     logger.info(`Condition "${step.condition}" evaluated to: ${String(conditionResult)}`);
 
     if (conditionResult) {
-      return executeSteps({ steps: step.then, variables, lastResult });
+      return executeSteps({ steps: step.then, variables, lastResult, defaultTool, defaultModel });
     }
 
     if (step.else) {
-      return executeSteps({ steps: step.else, variables, lastResult });
+      return executeSteps({ steps: step.else, variables, lastResult, defaultTool, defaultModel });
     }
 
     return [];
@@ -205,10 +222,14 @@ export const createFlowEngine = ({
     step,
     variables,
     lastResult,
+    defaultTool,
+    defaultModel,
   }: {
     step: WhileLoopStep;
     variables: Record<string, unknown>;
     lastResult?: SkillResult;
+    defaultTool: ToolType;
+    defaultModel: string;
   }): Promise<SkillResult[]> => {
     const maxIterations = step.maxIterations ?? DEFAULT_MAX_ITERATIONS;
     const results: SkillResult[] = [];
@@ -236,6 +257,8 @@ export const createFlowEngine = ({
         steps: step.steps,
         variables,
         lastResult: currentLastResult,
+        defaultTool,
+        defaultModel,
       });
       results.push(...iterationResults);
 
@@ -254,10 +277,14 @@ export const createFlowEngine = ({
     step,
     variables,
     lastResult,
+    defaultTool,
+    defaultModel,
   }: {
     step: ForEachStep;
     variables: Record<string, unknown>;
     lastResult?: SkillResult;
+    defaultTool: ToolType;
+    defaultModel: string;
   }): Promise<SkillResult[]> => {
     const items = itemsResolver({ items: step.items, variables });
     const results: SkillResult[] = [];
@@ -278,6 +305,8 @@ export const createFlowEngine = ({
         steps: step.steps,
         variables: iterationVariables,
         lastResult: currentLastResult,
+        defaultTool,
+        defaultModel,
       });
       results.push(...iterationResults);
 
@@ -291,10 +320,14 @@ export const createFlowEngine = ({
     steps,
     variables,
     lastResult,
+    defaultTool,
+    defaultModel,
   }: {
     steps: Step[];
     variables: Record<string, unknown>;
     lastResult?: SkillResult;
+    defaultTool: ToolType;
+    defaultModel: string;
   }): Promise<SkillResult[]> => {
     const results: SkillResult[] = [];
     let currentLastResult = lastResult;
@@ -302,7 +335,7 @@ export const createFlowEngine = ({
     for (const step of steps) {
       switch (step.type) {
         case "skill": {
-          const result = await executeSkillStep({ step, variables });
+          const result = await executeSkillStep({ step, variables, defaultTool, defaultModel });
           results.push(result);
           currentLastResult = result;
           break;
@@ -312,6 +345,8 @@ export const createFlowEngine = ({
             step,
             variables,
             lastResult: currentLastResult,
+            defaultTool,
+            defaultModel,
           });
           results.push(...condResults);
           if (condResults.length > 0) {
@@ -324,6 +359,8 @@ export const createFlowEngine = ({
             step,
             variables,
             lastResult: currentLastResult,
+            defaultTool,
+            defaultModel,
           });
           results.push(...whileResults);
           if (whileResults.length > 0) {
@@ -336,6 +373,8 @@ export const createFlowEngine = ({
             step,
             variables,
             lastResult: currentLastResult,
+            defaultTool,
+            defaultModel,
           });
           results.push(...forEachResults);
           if (forEachResults.length > 0) {
@@ -367,7 +406,12 @@ export const createFlowEngine = ({
     logger.info(`Starting flow: ${flow.name}`);
 
     try {
-      const results = await executeSteps({ steps: flow.steps, variables });
+      const results = await executeSteps({
+        steps: flow.steps,
+        variables,
+        defaultTool: flow.defaultTool,
+        defaultModel: flow.defaultModel,
+      });
       const success = results.every((r) => r.success);
 
       logger.info(`Flow "${flow.name}" completed: success=${String(success)}`);

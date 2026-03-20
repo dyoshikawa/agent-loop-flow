@@ -11,6 +11,8 @@ describe("parseFlowContent", () => {
   it("parses a valid flow definition", () => {
     const content = JSON.stringify({
       name: "test-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
           type: "skill",
@@ -23,6 +25,8 @@ describe("parseFlowContent", () => {
 
     const result = parseFlowContent({ content });
     expect(result.name).toBe("test-flow");
+    expect(result.defaultTool).toBe("opencode");
+    expect(result.defaultModel).toBe("github-copilot/claude-opus-4.6");
     expect(result.steps).toHaveLength(1);
     expect(result.steps[0]?.type).toBe("skill");
   });
@@ -31,6 +35,8 @@ describe("parseFlowContent", () => {
     const content = `{
       // This is a comment
       "name": "commented-flow",
+      "defaultTool": "opencode",
+      "defaultModel": "github-copilot/claude-opus-4.6",
       "steps": [
         {
           "type": "skill",
@@ -48,6 +54,8 @@ describe("parseFlowContent", () => {
   it("parses JSONC with trailing commas", () => {
     const content = `{
       "name": "trailing-comma-flow",
+      "defaultTool": "opencode",
+      "defaultModel": "github-copilot/claude-opus-4.6",
       "steps": [
         {
           "type": "skill",
@@ -67,6 +75,8 @@ describe("parseFlowContent", () => {
       name: "full-flow",
       description: "A test flow",
       version: "1.0.0",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
       variables: { key: "value" },
       steps: [
         {
@@ -88,6 +98,8 @@ describe("parseFlowContent", () => {
   it("parses flow with conditional step", () => {
     const content = JSON.stringify({
       name: "cond-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
           type: "conditional",
@@ -120,6 +132,8 @@ describe("parseFlowContent", () => {
   it("parses flow with while-loop step", () => {
     const content = JSON.stringify({
       name: "loop-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
           type: "while-loop",
@@ -145,6 +159,8 @@ describe("parseFlowContent", () => {
   it("parses flow with for-each step", () => {
     const content = JSON.stringify({
       name: "foreach-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
           type: "for-each",
@@ -177,14 +193,62 @@ describe("parseFlowContent", () => {
   });
 
   it("throws on empty steps array", () => {
-    const content = JSON.stringify({ name: "empty-steps", steps: [] });
+    const content = JSON.stringify({
+      name: "empty-steps",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
+      steps: [],
+    });
     expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
   });
 
   it("throws on invalid step type", () => {
     const content = JSON.stringify({
       name: "bad-step",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
       steps: [{ type: "unknown", name: "x" }],
+    });
+    expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
+  });
+
+  it("parses flow with per-step tool and model overrides", () => {
+    const content = JSON.stringify({
+      name: "override-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
+      steps: [
+        {
+          type: "skill",
+          name: "step-1",
+          skill: "test-skill",
+          prompt: "test prompt",
+          tool: "claude-agent",
+          model: "claude-sonnet-4-20250514",
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    const step = result.steps[0];
+    expect(step?.type).toBe("skill");
+    if (step?.type === "skill") {
+      expect(step.tool).toBe("claude-agent");
+      expect(step.model).toBe("claude-sonnet-4-20250514");
+    }
+  });
+
+  it("throws on missing defaultTool and defaultModel", () => {
+    const content = JSON.stringify({
+      name: "missing-defaults",
+      steps: [
+        {
+          type: "skill",
+          name: "step-1",
+          skill: "test-skill",
+          prompt: "test prompt",
+        },
+      ],
     });
     expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
   });
@@ -205,6 +269,8 @@ describe("parseFlowFile", () => {
   it("reads and parses a flow file from disk", async () => {
     const flowContent = JSON.stringify({
       name: "file-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
           type: "skill",

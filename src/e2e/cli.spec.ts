@@ -185,6 +185,8 @@ describe("CLI E2E Tests", () => {
       const flowPath = await writeFlowFile(tmpRelative, "minimal.jsonc", {
         name: "minimal-test",
         version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
         steps: [
           {
             type: "skill",
@@ -205,6 +207,8 @@ describe("CLI E2E Tests", () => {
       const flowPath = await writeFlowFile(tmpRelative, "with-vars.jsonc", {
         name: "vars-test",
         version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
         variables: {
           greeting: "hello",
         },
@@ -228,6 +232,8 @@ describe("CLI E2E Tests", () => {
       const flowPath = await writeFlowFile(tmpRelative, "conditional.jsonc", {
         name: "conditional-test",
         version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
         variables: {
           enabled: true,
         },
@@ -266,6 +272,8 @@ describe("CLI E2E Tests", () => {
       const flowPath = await writeFlowFile(tmpRelative, "for-each.jsonc", {
         name: "for-each-test",
         version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
         variables: {
           items: ["a", "b", "c"],
         },
@@ -297,6 +305,8 @@ describe("CLI E2E Tests", () => {
       const flowPath = await writeFlowFile(tmpRelative, "while-loop.jsonc", {
         name: "while-loop-test",
         version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
         variables: {
           shouldLoop: false,
         },
@@ -351,6 +361,8 @@ describe("CLI E2E Tests", () => {
       const flowPath = await writeFlowFile(tmpRelative, "missing-fields.jsonc", {
         name: "missing-steps",
         version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
         // steps field is missing
       });
 
@@ -363,6 +375,8 @@ describe("CLI E2E Tests", () => {
       const flowPath = await writeFlowFile(tmpRelative, "empty-steps.jsonc", {
         name: "empty-steps",
         version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
         steps: [],
       });
 
@@ -375,6 +389,8 @@ describe("CLI E2E Tests", () => {
       const flowPath = await writeFlowFile(tmpRelative, "invalid-step-type.jsonc", {
         name: "invalid-type",
         version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
         steps: [
           {
             type: "unknown-type",
