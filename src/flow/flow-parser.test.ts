@@ -1,0 +1,230 @@
+// oxlint-disable unicorn/no-thenable -- "then" is a conditional branch property name, not a Promise thenable
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+
+import { setupTestDirectory } from "../test-utils/test-directories.js";
+import { parseFlowContent, parseFlowFile } from "./flow-parser.js";
+
+describe("parseFlowContent", () => {
+  it("parses a valid flow definition", () => {
+    const content = JSON.stringify({
+      name: "test-flow",
+      steps: [
+        {
+          type: "skill",
+          name: "step-1",
+          skill: "test-skill",
+          prompt: "test prompt",
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    expect(result.name).toBe("test-flow");
+    expect(result.steps).toHaveLength(1);
+    expect(result.steps[0]?.type).toBe("skill");
+  });
+
+  it("parses JSONC with comments", () => {
+    const content = `{
+      // This is a comment
+      "name": "commented-flow",
+      "steps": [
+        {
+          "type": "skill",
+          "name": "step-1",
+          "skill": "my-skill",
+          "prompt": "do something"
+        }
+      ]
+    }`;
+
+    const result = parseFlowContent({ content });
+    expect(result.name).toBe("commented-flow");
+  });
+
+  it("parses JSONC with trailing commas", () => {
+    const content = `{
+      "name": "trailing-comma-flow",
+      "steps": [
+        {
+          "type": "skill",
+          "name": "step-1",
+          "skill": "my-skill",
+          "prompt": "do something",
+        },
+      ],
+    }`;
+
+    const result = parseFlowContent({ content });
+    expect(result.name).toBe("trailing-comma-flow");
+  });
+
+  it("parses flow with optional fields", () => {
+    const content = JSON.stringify({
+      name: "full-flow",
+      description: "A test flow",
+      version: "1.0.0",
+      variables: { key: "value" },
+      steps: [
+        {
+          type: "skill",
+          name: "step-1",
+          skill: "test-skill",
+          prompt: "test prompt",
+          config: { timeout: 5000 },
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    expect(result.description).toBe("A test flow");
+    expect(result.version).toBe("1.0.0");
+    expect(result.variables).toEqual({ key: "value" });
+  });
+
+  it("parses flow with conditional step", () => {
+    const content = JSON.stringify({
+      name: "cond-flow",
+      steps: [
+        {
+          type: "conditional",
+          name: "check",
+          condition: "someVar",
+          then: [
+            {
+              type: "skill",
+              name: "then-step",
+              skill: "s1",
+              prompt: "p1",
+            },
+          ],
+          else: [
+            {
+              type: "skill",
+              name: "else-step",
+              skill: "s2",
+              prompt: "p2",
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    expect(result.steps[0]?.type).toBe("conditional");
+  });
+
+  it("parses flow with while-loop step", () => {
+    const content = JSON.stringify({
+      name: "loop-flow",
+      steps: [
+        {
+          type: "while-loop",
+          name: "retry",
+          condition: "shouldRetry",
+          maxIterations: 5,
+          steps: [
+            {
+              type: "skill",
+              name: "retry-step",
+              skill: "runner",
+              prompt: "retry",
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    expect(result.steps[0]?.type).toBe("while-loop");
+  });
+
+  it("parses flow with for-each step", () => {
+    const content = JSON.stringify({
+      name: "foreach-flow",
+      steps: [
+        {
+          type: "for-each",
+          name: "process-items",
+          items: "fileList",
+          as: "file",
+          steps: [
+            {
+              type: "skill",
+              name: "process",
+              skill: "processor",
+              prompt: "process {{file}}",
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    expect(result.steps[0]?.type).toBe("for-each");
+  });
+
+  it("throws on empty content", () => {
+    expect(() => parseFlowContent({ content: "" })).toThrow();
+  });
+
+  it("throws on missing required fields", () => {
+    const content = JSON.stringify({ description: "no name" });
+    expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
+  });
+
+  it("throws on empty steps array", () => {
+    const content = JSON.stringify({ name: "empty-steps", steps: [] });
+    expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
+  });
+
+  it("throws on invalid step type", () => {
+    const content = JSON.stringify({
+      name: "bad-step",
+      steps: [{ type: "unknown", name: "x" }],
+    });
+    expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
+  });
+});
+
+describe("parseFlowFile", () => {
+  let testDir: string;
+  let cleanup: () => Promise<void>;
+
+  beforeEach(async () => {
+    ({ testDir, cleanup } = await setupTestDirectory());
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  it("reads and parses a flow file from disk", async () => {
+    const flowContent = JSON.stringify({
+      name: "file-flow",
+      steps: [
+        {
+          type: "skill",
+          name: "step-1",
+          skill: "test-skill",
+          prompt: "test prompt",
+        },
+      ],
+    });
+
+    const filePath = join(testDir, "test.jsonc");
+    await writeFile(filePath, flowContent, "utf-8");
+
+    const result = await parseFlowFile({ filePath });
+    expect(result.name).toBe("file-flow");
+    expect(result.steps).toHaveLength(1);
+  });
+
+  it("throws on non-existent file", async () => {
+    const filePath = join(testDir, "non-existent.jsonc");
+    await expect(parseFlowFile({ filePath })).rejects.toThrow();
+  });
+});

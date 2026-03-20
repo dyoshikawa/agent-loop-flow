@@ -1,0 +1,31 @@
+{
+  // Simple sequential flow example
+  // Runs three skills in order: analyze -> refactor -> test
+  "$schema": "../flow-schema.json",
+  "name": "simple-sequential",
+  "description": "A simple flow that runs skills in sequence",
+  "version": "1.0.0",
+  "variables": {
+    "targetFile": "src/index.ts",
+  },
+  "steps": [
+    {
+      "type": "skill",
+      "name": "analyze-code",
+      "skill": "code-analysis",
+      "prompt": "Analyze the code in {{targetFile}} and identify potential improvements",
+    },
+    {
+      "type": "skill",
+      "name": "refactor-code",
+      "skill": "code-refactor",
+      "prompt": "Refactor {{targetFile}} based on the analysis results",
+    },
+    {
+      "type": "skill",
+      "name": "run-tests",
+      "skill": "test-runner",
+      "prompt": "Run tests to verify the refactoring of {{targetFile}}",
+    },
+  ],
+}

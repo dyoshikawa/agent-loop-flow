@@ -1,24 +1,22 @@
 {
-  "name": "rulesync",
-  "version": "7.6.3",
-  "description": "Unified AI rules management CLI tool that generates configuration files for various AI development tools",
+  "name": "agent-loop-flow",
+  "version": "0.1.0",
+  "description": "AI coding agent utility CLI that orchestrates skill flows with conditionals and loops",
   "keywords": [
     "ai",
+    "agent",
     "cli",
-    "cline",
-    "configuration",
-    "copilot",
-    "cursor",
-    "development",
-    "rules"
+    "flow",
+    "orchestration",
+    "skills"
   ],
-  "homepage": "https://github.com/dyoshikawa/rulesync#readme",
+  "homepage": "https://github.com/dyoshikawa-claw/agent-loop-flow#readme",
   "bugs": {
-    "url": "https://github.com/dyoshikawa/rulesync/issues"
+    "url": "https://github.com/dyoshikawa-claw/agent-loop-flow/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/dyoshikawa/rulesync.git"
+    "url": "https://github.com/dyoshikawa-claw/agent-loop-flow.git"
   },
   "license": "MIT",
   "author": "dyoshikawa",
@@ -39,7 +37,7 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "rulesync": "dist/cli/index.js"
+    "agent-loop-flow": "dist/cli/index.js"
   },
   "files": [
     "dist"
@@ -60,12 +58,11 @@
     "fix": "pnpm run fmt && pnpm run oxlint:fix && pnpm run eslint:fix",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
-    "generate": "pnpm run dev generate",
     "generate:schema": "tsx scripts/generate-json-schema.ts",
     "knip": "knip",
     "oxlint": "oxlint . --max-warnings 0",
     "oxlint:fix": "oxlint . --fix --max-warnings 0",
-    "prepare": "simple-git-hooks && pnpm generate",
+    "prepare": "simple-git-hooks",
     "prepublishOnly": "pnpm build",
     "secretlint": "secretlint --secretlintignore .gitignore \"**/*\"",
     "sort": "sort-package-json",

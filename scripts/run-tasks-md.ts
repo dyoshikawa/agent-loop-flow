@@ -24,7 +24,7 @@ const filePaths: string[] = []; // Empty for now - requires glob functionality
 
 const main = async () => {
   for (const filePath of filePaths) {
-    const fileContent = await readFileContent(filePath);
+    const fileContent = await readFileContent({ filePath });
     const tasks = fileContent.split("---\n");
     for (const task of tasks) {
       try {

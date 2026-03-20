@@ -62,19 +62,15 @@ export default defineConfig([
             allowReferenceFrom: [
               "src/utils/file.ts",
               "src/utils/file.test.ts",
-              "src/lib/update.ts",
-              "src/lib/update.test.ts",
+              "src/test-utils/test-directories.ts",
+              "src/flow/flow-parser.test.ts",
               "scripts/**/*.ts",
             ],
             allowSameModule: false,
           },
           {
             module: "node:os",
-            allowReferenceFrom: [
-              "src/utils/file.ts",
-              "src/utils/file.test.ts",
-              "src/lib/update.ts",
-            ],
+            allowReferenceFrom: ["src/utils/file.ts", "src/utils/file.test.ts"],
             allowSameModule: false,
           },
           {

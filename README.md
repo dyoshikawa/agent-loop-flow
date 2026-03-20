@@ -1,35 +1,214 @@
 # agent-loop-flow
 
-AI coding agent utility CLI.
+AI coding agent utility CLI that orchestrates skill flows with conditionals and loops, defined in JSONC files.
 
 ## Overview
 
 Agent-loop-flow lets you compose agent workflows by chaining skills:
 
 ```
-skill A → skill B → skill C ...
+skill A -> skill B -> skill C ...
 ```
 
 Define flows in JSONC files with support for:
-- **Conditional branching** — route execution based on conditions
-- **Loops** — iterate over tasks until completion
-- **JSON Schema** — validated flow definitions
 
-## Features
-
-- 🔄 **Flow-based execution** — chain multiple skills in sequence
-- 🔀 **Control flow** — conditionals and loops for complex workflows
-- 📝 **JSONC configuration** — human-readable flow definitions with comments
-- ✅ **JSON Schema** — autocomplete and validation in your editor
-- 🤖 **SDK support** — works with OpenCode SDK and Claude Agent SDK internally
+- **Sequential execution** -- run skills in order
+- **Conditional branching** -- route execution based on conditions
+- **Loops** -- while-loops and for-each iteration
+- **JSON Schema validation** -- validated flow definitions with IDE autocompletion
 
 ## Quick Start
 
-(TBD)
+### Install
 
-## Documentation
+```bash
+pnpm install
+pnpm build
+```
 
-See `docs/` for detailed guides.
+### Define a Flow
+
+Create a `.jsonc` file (e.g., `my-flow.jsonc`):
+
+```jsonc
+{
+  "$schema": "./flow-schema.json",
+  "name": "my-flow",
+  "description": "Analyze and fix code",
+  "variables": {
+    "targetFile": "src/index.ts",
+  },
+  "steps": [
+    {
+      "type": "skill",
+      "name": "analyze",
+      "skill": "code-analysis",
+      "prompt": "Analyze {{targetFile}} for issues",
+    },
+    {
+      "type": "conditional",
+      "name": "check-results",
+      "condition": "lastResult.success",
+      "then": [
+        {
+          "type": "skill",
+          "name": "fix",
+          "skill": "code-fix",
+          "prompt": "Fix issues found in {{targetFile}}",
+        },
+      ],
+    },
+  ],
+}
+```
+
+### Run a Flow
+
+```bash
+# Run a flow
+pnpm dev run my-flow.jsonc
+
+# Run with variables
+pnpm dev run my-flow.jsonc --var targetFile=src/app.ts
+
+# Validate without executing
+pnpm dev validate my-flow.jsonc
+```
+
+## Flow Definition
+
+### Step Types
+
+#### Skill Step
+
+Executes a single skill with a prompt. Supports `{{variable}}` interpolation.
+
+```jsonc
+{
+  "type": "skill",
+  "name": "analyze-code",
+  "skill": "code-analysis",
+  "prompt": "Analyze {{targetFile}}",
+}
+```
+
+#### Conditional Step
+
+Branches execution based on a condition.
+
+```jsonc
+{
+  "type": "conditional",
+  "name": "check-result",
+  "condition": "hasIssues",
+  "then": [
+    // steps when condition is true
+  ],
+  "else": [
+    // steps when condition is false (optional)
+  ],
+}
+```
+
+Supported conditions:
+
+- Variable truthiness: `"variableName"`
+- Equality: `"variable == \"value\""`
+- Inequality: `"variable != \"value\""`
+- Last result: `"lastResult.success"`
+- Output contains: `"lastResult.output contains \"error\""`
+
+#### While Loop
+
+Repeats steps while a condition is true.
+
+```jsonc
+{
+  "type": "while-loop",
+  "name": "retry-loop",
+  "condition": "shouldRetry",
+  "maxIterations": 5,
+  "steps": [
+    // steps to repeat
+  ],
+}
+```
+
+#### For-Each Loop
+
+Iterates over items in a variable.
+
+```jsonc
+{
+  "type": "for-each",
+  "name": "process-files",
+  "items": "fileList",
+  "as": "currentFile",
+  "steps": [
+    {
+      "type": "skill",
+      "name": "process",
+      "skill": "processor",
+      "prompt": "Process {{currentFile}}",
+    },
+  ],
+}
+```
+
+### Variables
+
+Variables can be defined at the flow level and overridden via CLI:
+
+```jsonc
+{
+  "variables": {
+    "targetFile": "src/index.ts",
+    "mode": "strict",
+  },
+}
+```
+
+```bash
+pnpm dev run flow.jsonc --var targetFile=src/app.ts --var mode=lenient
+```
+
+## Programmatic API
+
+```typescript
+import { parseFlowFile, createFlowEngine } from "agent-loop-flow";
+import type { SkillExecutor } from "agent-loop-flow";
+
+// Define how skills are executed
+const skillExecutor: SkillExecutor = async ({ skill, prompt, variables }) => {
+  // Integrate with OpenCode SDK, Claude Agent SDK, etc.
+  return { output: "result", success: true };
+};
+
+// Parse and run a flow
+const flow = await parseFlowFile({ filePath: "my-flow.jsonc" });
+const engine = createFlowEngine({ skillExecutor });
+const result = await engine.executeFlow({ flow });
+
+console.log(result.success);
+console.log(result.results);
+```
+
+## Examples
+
+See the `examples/` directory for sample flow definitions:
+
+- `simple-sequential.jsonc` -- Basic skill chain
+- `conditional-fix.jsonc` -- Conditional branching
+- `loop-processing.jsonc` -- For-each and while loops
+
+## Development
+
+```bash
+pnpm install
+pnpm check     # fmt + lint + typecheck
+pnpm test      # run tests
+pnpm build     # build for distribution
+```
 
 ## License
 
