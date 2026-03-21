@@ -1,14 +1,14 @@
 {
   "name": "agent-loop-flow",
   "version": "0.1.0",
-  "description": "AI coding agent utility CLI that orchestrates skill flows with transitions and loops",
+  "description": "AI coding agent utility CLI that orchestrates prompt flows with transitions and loops",
   "keywords": [
     "ai",
     "agent",
     "cli",
     "flow",
     "orchestration",
-    "skills"
+    "prompts"
   ],
   "homepage": "https://github.com/dyoshikawa/agent-loop-flow#readme",
   "bugs": {

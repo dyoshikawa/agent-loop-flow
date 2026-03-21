@@ -3,19 +3,19 @@
 [![npm version](https://img.shields.io/npm/v/agent-loop-flow.svg)](https://www.npmjs.com/package/agent-loop-flow)
 [![license](https://img.shields.io/npm/l/agent-loop-flow.svg)](https://github.com/dyoshikawa-claw/agent-loop-flow/blob/main/LICENSE)
 
-AI coding agent utility CLI that orchestrates skill flows with transitions and loops, defined in JSONC files.
+AI coding agent utility CLI that orchestrates prompt flows with transitions and loops, defined in JSONC files.
 
 ## Overview
 
-Agent-loop-flow lets you compose agent workflows by chaining skills:
+Agent-loop-flow lets you compose agent workflows by chaining prompts:
 
 ```
-skill A -> skill B -> skill C ...
+prompt A -> prompt B -> prompt C ...
 ```
 
 Define flows in JSONC files with support for:
 
-- **Sequential execution** -- run skills in order
+- **Sequential execution** -- run prompts in order
 - **Flat transition rules** -- route execution via `next` rules on steps (no nesting for if/else)
 - **Loops** -- while-loops and for-each iteration
 - **JSON Schema validation** -- validated flow definitions with IDE autocompletion
@@ -244,7 +244,7 @@ console.log(result.results);
 
 See the `examples/` directory for sample flow definitions:
 
-- `simple-sequential.jsonc` -- Basic skill chain
+- `simple-sequential.jsonc` -- Basic prompt chain
 - `conditional-fix.jsonc` -- Conditional branching via next rules
 - `loop-processing.jsonc` -- For-each and while loops
 

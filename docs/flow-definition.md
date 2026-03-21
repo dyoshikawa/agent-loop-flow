@@ -270,6 +270,6 @@ Point `$schema` to `flow-schema.json` for IDE autocompletion and validation:
 See the `examples/` directory for sample flows:
 
 - `helloworld.jsonc` -- Minimal single-step flow
-- `simple-sequential.jsonc` -- Sequential skill chain
+- `simple-sequential.jsonc` -- Sequential prompt chain
 - `conditional-fix.jsonc` -- Conditional branching via next rules
 - `loop-processing.jsonc` -- For-each and while loops

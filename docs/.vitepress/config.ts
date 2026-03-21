@@ -3,7 +3,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   title: "agent-loop-flow",
   description:
-    "AI coding agent utility CLI that orchestrates skill flows with transitions and loops",
+    "AI coding agent utility CLI that orchestrates prompt flows with transitions and loops",
   themeConfig: {
     nav: [
       { text: "Home", link: "/" },
