@@ -228,9 +228,9 @@ describe("CLI E2E Tests", () => {
       expect(stdout).toContain("completed successfully");
     });
 
-    it("should handle a flow with conditional steps", async () => {
-      const flowPath = await writeFlowFile(tmpRelative, "conditional.jsonc", {
-        name: "conditional-test",
+    it("should handle a flow with next-rule branching", async () => {
+      const flowPath = await writeFlowFile(tmpRelative, "next-rules.jsonc", {
+        name: "next-rules-test",
         version: "1.0.0",
         defaultTool: "opencode",
         defaultModel: "github-copilot/claude-opus-4.6",
@@ -239,32 +239,30 @@ describe("CLI E2E Tests", () => {
         },
         steps: [
           {
-            type: "conditional",
-            name: "check-enabled",
-            condition: "enabled",
-            then: [
-              {
-                type: "skill",
-                name: "run-if-enabled",
-                skill: "worker",
-                prompt: "Do work",
-              },
-            ],
-            else: [
-              {
-                type: "skill",
-                name: "skip-if-disabled",
-                skill: "reporter",
-                prompt: "Report skipped",
-              },
-            ],
+            type: "skill",
+            name: "check",
+            skill: "checker",
+            prompt: "Check state",
+            next: [{ condition: "enabled", step: "run-if-enabled" }, { step: "skip-if-disabled" }],
+          },
+          {
+            type: "skill",
+            name: "run-if-enabled",
+            skill: "worker",
+            prompt: "Do work",
+          },
+          {
+            type: "skill",
+            name: "skip-if-disabled",
+            skill: "reporter",
+            prompt: "Report skipped",
           },
         ],
       });
 
       const { stdout, exitCode } = await runCli(["run", flowPath]);
       expect(exitCode).toBe(0);
-      expect(stdout).toContain("conditional-test");
+      expect(stdout).toContain("next-rules-test");
       expect(stdout).toContain("completed successfully");
     });
 

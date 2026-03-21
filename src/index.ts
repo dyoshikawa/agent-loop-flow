@@ -7,13 +7,16 @@ export {
   FlowDefinitionSchema,
   StepSchema,
   SkillStepSchema,
+  NextRuleSchema,
+  NextSchema,
   ToolTypeSchema,
 } from "./flow/flow-schema.js";
 export type {
   FlowDefinition,
   Step,
   SkillStep,
-  ConditionalStep,
+  NextRule,
+  Next,
   WhileLoopStep,
   ForEachStep,
   ToolType,

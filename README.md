@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/agent-loop-flow.svg)](https://www.npmjs.com/package/agent-loop-flow)
 [![license](https://img.shields.io/npm/l/agent-loop-flow.svg)](https://github.com/dyoshikawa-claw/agent-loop-flow/blob/main/LICENSE)
 
-AI coding agent utility CLI that orchestrates skill flows with conditionals and loops, defined in JSONC files.
+AI coding agent utility CLI that orchestrates skill flows with transitions and loops, defined in JSONC files.
 
 ## Overview
 
@@ -16,7 +16,7 @@ skill A -> skill B -> skill C ...
 Define flows in JSONC files with support for:
 
 - **Sequential execution** -- run skills in order
-- **Conditional branching** -- route execution based on conditions
+- **Flat transition rules** -- route execution via `next` rules on steps (no nesting for if/else)
 - **Loops** -- while-loops and for-each iteration
 - **JSON Schema validation** -- validated flow definitions with IDE autocompletion
 
@@ -49,8 +49,11 @@ Create a `.jsonc` file (e.g., `my-flow.jsonc`):
   "$schema": "./flow-schema.json",
   "name": "my-flow",
   "description": "Analyze and fix code",
+  "defaultTool": "opencode",
+  "defaultModel": "github-copilot/claude-opus-4.6",
   "variables": {
     "targetFile": "src/index.ts",
+    "hasIssues": true,
   },
   "steps": [
     {
@@ -58,19 +61,19 @@ Create a `.jsonc` file (e.g., `my-flow.jsonc`):
       "name": "analyze",
       "skill": "code-analysis",
       "prompt": "Analyze {{targetFile}} for issues",
+      "next": [{ "condition": "hasIssues", "step": "fix" }, { "step": "done" }],
     },
     {
-      "type": "conditional",
-      "name": "check-results",
-      "condition": "lastResult.success",
-      "then": [
-        {
-          "type": "skill",
-          "name": "fix",
-          "skill": "code-fix",
-          "prompt": "Fix issues found in {{targetFile}}",
-        },
-      ],
+      "type": "skill",
+      "name": "fix",
+      "skill": "code-fix",
+      "prompt": "Fix issues found in {{targetFile}}:\n{{previousResult.output}}",
+    },
+    {
+      "type": "skill",
+      "name": "done",
+      "skill": "reporter",
+      "prompt": "Report that {{targetFile}} is clean",
     },
   ],
 }
@@ -95,7 +98,7 @@ agent-loop-flow validate my-flow.jsonc
 
 #### Skill Step
 
-Executes a single skill with a prompt. Supports `{{variable}}` interpolation.
+Executes a single skill with a prompt. Supports `{{variable}}` interpolation and optional `next` transition rules.
 
 ```jsonc
 {
@@ -103,23 +106,26 @@ Executes a single skill with a prompt. Supports `{{variable}}` interpolation.
   "name": "analyze-code",
   "skill": "code-analysis",
   "prompt": "Analyze {{targetFile}}",
+  "next": "verify-step", // unconditional jump
 }
 ```
 
-#### Conditional Step
+#### Transition Rules (`next`)
 
-Branches execution based on a condition.
+The `next` field controls which step runs after the current one. It can be:
+
+- A **string** for an unconditional jump: `"next": "step-name"`
+- An **array of rules** for conditional branching:
 
 ```jsonc
 {
-  "type": "conditional",
-  "name": "check-result",
-  "condition": "hasIssues",
-  "then": [
-    // steps when condition is true
-  ],
-  "else": [
-    // steps when condition is false (optional)
+  "type": "skill",
+  "name": "check",
+  "skill": "checker",
+  "prompt": "Check code",
+  "next": [
+    { "condition": "hasIssues", "step": "fix-issues" },
+    { "step": "report-clean" }, // default (else) branch
   ],
 }
 ```
@@ -131,6 +137,8 @@ Supported conditions:
 - Inequality: `"variable != \"value\""`
 - Last result: `"lastResult.success"`
 - Output contains: `"lastResult.output contains \"error\""`
+
+If no `next` is specified (or no rule matches and there is no default), the engine falls through to the next step in array order.
 
 #### While Loop
 
@@ -186,6 +194,31 @@ Variables can be defined at the flow level and overridden via CLI:
 agent-loop-flow run flow.jsonc --var targetFile=src/app.ts --var mode=lenient
 ```
 
+#### Previous Result Variables
+
+Each skill step can reference the previous step's output using `{{previousResult.output}}` or the flat camelCase form `{{previousResultOutput}}`. All fields from the previous result are available:
+
+```jsonc
+{
+  "steps": [
+    {
+      "type": "skill",
+      "name": "analyze",
+      "skill": "code-analysis",
+      "prompt": "Analyze {{targetFile}}",
+    },
+    {
+      "type": "skill",
+      "name": "fix",
+      "skill": "code-fix",
+      "prompt": "Fix the issues:\n{{previousResult.output}}",
+    },
+  ],
+}
+```
+
+Available variables: `previousResult.output`, `previousResult.success`, `previousResult.stepName`, `previousResult.skill`, `previousResult.error` (and their flat camelCase equivalents like `previousResultOutput`).
+
 ## Programmatic API
 
 ```typescript
@@ -212,7 +245,7 @@ console.log(result.results);
 See the `examples/` directory for sample flow definitions:
 
 - `simple-sequential.jsonc` -- Basic skill chain
-- `conditional-fix.jsonc` -- Conditional branching
+- `conditional-fix.jsonc` -- Conditional branching via next rules
 - `loop-processing.jsonc` -- For-each and while loops
 
 ## Development

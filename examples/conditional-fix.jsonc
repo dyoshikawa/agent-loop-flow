@@ -1,6 +1,8 @@
 {
-  // Conditional flow example
-  // Analyzes code, then branches based on whether issues were found
+  // Conditional flow example (flat transition model)
+  // Analyzes code, then branches based on the hasIssues variable using next rules.
+  // If hasIssues is true  -> fix-issues -> verify-fix (then ends)
+  // If hasIssues is false -> report-clean (then ends)
   "$schema": "../flow-schema.json",
   "name": "conditional-fix",
   "description": "Analyze code and conditionally fix issues",
@@ -17,33 +19,26 @@
       "name": "analyze",
       "skill": "code-analysis",
       "prompt": "Analyze {{targetFile}} for bugs and code smells",
+      "next": [{ "condition": "hasIssues", "step": "fix-issues" }, { "step": "report-clean" }],
     },
     {
-      "type": "conditional",
-      "name": "check-issues",
-      "condition": "hasIssues",
-      "then": [
-        {
-          "type": "skill",
-          "name": "fix-issues",
-          "skill": "code-fix",
-          "prompt": "Fix the identified issues in {{targetFile}}",
-        },
-        {
-          "type": "skill",
-          "name": "verify-fix",
-          "skill": "test-runner",
-          "prompt": "Run tests to verify the fixes in {{targetFile}}",
-        },
-      ],
-      "else": [
-        {
-          "type": "skill",
-          "name": "report-clean",
-          "skill": "reporter",
-          "prompt": "Report that {{targetFile}} has no issues",
-        },
-      ],
+      "type": "skill",
+      "name": "fix-issues",
+      "skill": "code-fix",
+      "prompt": "Fix the identified issues in {{targetFile}}:\n{{previousResult.output}}",
+      "next": "verify-fix",
+    },
+    {
+      "type": "skill",
+      "name": "verify-fix",
+      "skill": "test-runner",
+      "prompt": "Run tests to verify the fixes in {{targetFile}}",
+    },
+    {
+      "type": "skill",
+      "name": "report-clean",
+      "skill": "reporter",
+      "prompt": "Report that {{targetFile}} has no issues",
     },
   ],
 }

@@ -150,9 +150,7 @@ const createProgram = (): Command => {
 
   program
     .name("agent-loop-flow")
-    .description(
-      "AI coding agent utility CLI - orchestrate skill flows with conditionals and loops",
-    )
+    .description("AI coding agent utility CLI - orchestrate skill flows with transitions and loops")
     .version("0.1.0");
 
   program

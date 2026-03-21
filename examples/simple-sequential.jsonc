@@ -21,7 +21,7 @@
       "type": "skill",
       "name": "refactor-code",
       "skill": "code-refactor",
-      "prompt": "Refactor {{targetFile}} based on the analysis results",
+      "prompt": "Refactor {{targetFile}} based on the analysis results:\n{{previousResult.output}}",
     },
     {
       "type": "skill",

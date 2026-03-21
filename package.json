@@ -1,7 +1,7 @@
 {
   "name": "agent-loop-flow",
   "version": "0.1.0",
-  "description": "AI coding agent utility CLI that orchestrates skill flows with conditionals and loops",
+  "description": "AI coding agent utility CLI that orchestrates skill flows with transitions and loops",
   "keywords": [
     "ai",
     "agent",

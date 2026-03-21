@@ -1,4 +1,3 @@
-// oxlint-disable unicorn/no-thenable -- "then" is a conditional branch property name, not a Promise thenable
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -95,38 +94,77 @@ describe("parseFlowContent", () => {
     expect(result.variables).toEqual({ key: "value" });
   });
 
-  it("parses flow with conditional step", () => {
+  it("parses flow with skill step that has a next string", () => {
     const content = JSON.stringify({
-      name: "cond-flow",
+      name: "next-flow",
       defaultTool: "opencode",
       defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
-          type: "conditional",
-          name: "check",
-          condition: "someVar",
-          then: [
-            {
-              type: "skill",
-              name: "then-step",
-              skill: "s1",
-              prompt: "p1",
-            },
-          ],
-          else: [
-            {
-              type: "skill",
-              name: "else-step",
-              skill: "s2",
-              prompt: "p2",
-            },
-          ],
+          type: "skill",
+          name: "step-a",
+          skill: "s1",
+          prompt: "p1",
+          next: "step-c",
+        },
+        {
+          type: "skill",
+          name: "step-b",
+          skill: "s2",
+          prompt: "p2",
+        },
+        {
+          type: "skill",
+          name: "step-c",
+          skill: "s3",
+          prompt: "p3",
         },
       ],
     });
 
     const result = parseFlowContent({ content });
-    expect(result.steps[0]?.type).toBe("conditional");
+    expect(result.steps).toHaveLength(3);
+    const firstStep = result.steps[0];
+    expect(firstStep?.type).toBe("skill");
+    if (firstStep?.type === "skill") {
+      expect(firstStep.next).toBe("step-c");
+    }
+  });
+
+  it("parses flow with skill step that has next rules array", () => {
+    const content = JSON.stringify({
+      name: "rules-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
+      steps: [
+        {
+          type: "skill",
+          name: "check",
+          skill: "checker",
+          prompt: "check something",
+          next: [{ condition: "hasIssues", step: "fix" }, { step: "done" }],
+        },
+        {
+          type: "skill",
+          name: "fix",
+          skill: "fixer",
+          prompt: "fix it",
+        },
+        {
+          type: "skill",
+          name: "done",
+          skill: "reporter",
+          prompt: "report done",
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    const firstStep = result.steps[0];
+    expect(firstStep?.type).toBe("skill");
+    if (firstStep?.type === "skill") {
+      expect(Array.isArray(firstStep.next)).toBe(true);
+    }
   });
 
   it("parses flow with while-loop step", () => {
@@ -208,6 +246,24 @@ describe("parseFlowContent", () => {
       defaultTool: "opencode",
       defaultModel: "github-copilot/claude-opus-4.6",
       steps: [{ type: "unknown", name: "x" }],
+    });
+    expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
+  });
+
+  it("rejects the removed conditional step type", () => {
+    const content = JSON.stringify({
+      name: "old-cond",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
+      steps: [
+        {
+          type: "conditional",
+          name: "check",
+          condition: "someVar",
+          // oxlint-disable-next-line unicorn/no-thenable -- testing old conditional step rejection
+          then: [{ type: "skill", name: "s", skill: "s", prompt: "p" }],
+        },
+      ],
     });
     expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
   });

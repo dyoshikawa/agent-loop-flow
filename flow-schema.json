@@ -86,40 +86,35 @@
             "model": {
               "type": "string",
               "minLength": 1
+            },
+            "next": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "condition": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "step": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["step"],
+                    "additionalProperties": false
+                  }
+                }
+              ]
             }
           },
           "required": ["type", "name", "skill", "prompt"],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "conditional"
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "condition": {
-              "type": "string",
-              "minLength": 1
-            },
-            "then": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema1"
-              }
-            },
-            "else": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema1"
-              }
-            }
-          },
-          "required": ["type", "name", "condition", "then"],
           "additionalProperties": false
         },
         {
@@ -185,5 +180,5 @@
   },
   "$id": "https://raw.githubusercontent.com/dyoshikawa-claw/agent-loop-flow/refs/heads/main/flow-schema.json",
   "title": "Agent Loop Flow Definition",
-  "description": "Schema for defining AI agent skill flows with conditionals and loops"
+  "description": "Schema for defining AI agent skill flows with transitions and loops"
 }

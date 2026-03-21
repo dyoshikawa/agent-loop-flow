@@ -7,7 +7,27 @@ export const ToolTypeSchema = z.union([z.literal("opencode"), z.literal("claude-
 export type ToolType = z.infer<typeof ToolTypeSchema>;
 
 /**
+ * Schema for a next-rule entry.
+ * Each rule has a condition expression and a target step name.
+ * A rule without a condition acts as the default (else) branch.
+ */
+export const NextRuleSchema = z.object({
+  condition: z.optional(z.string().check(z.minLength(1))),
+  step: z.string().check(z.minLength(1)),
+});
+export type NextRule = z.infer<typeof NextRuleSchema>;
+
+/**
+ * Schema for the "next" field on a skill step.
+ * - A bare string means "always go to this step".
+ * - An array of NextRule objects provides conditional branching.
+ */
+export const NextSchema = z.union([z.string().check(z.minLength(1)), z.array(NextRuleSchema)]);
+export type Next = z.infer<typeof NextSchema>;
+
+/**
  * Schema for a skill step - invokes a single skill with a prompt.
+ * The optional `next` field controls which step executes after this one.
  */
 export const SkillStepSchema = z.object({
   type: z.literal("skill"),
@@ -17,21 +37,14 @@ export const SkillStepSchema = z.object({
   config: z.optional(z.record(z.string(), z.unknown())),
   tool: z.optional(ToolTypeSchema),
   model: z.optional(z.string().check(z.minLength(1))),
+  next: z.optional(NextSchema),
 });
 export type SkillStep = z.infer<typeof SkillStepSchema>;
 
 /**
  * Manually defined Step type to avoid circular type inference issues with z.lazy().
  */
-export type Step = SkillStep | ConditionalStep | WhileLoopStep | ForEachStep;
-
-export type ConditionalStep = {
-  type: "conditional";
-  name: string;
-  condition: string;
-  then: Step[];
-  else?: Step[] | undefined;
-};
+export type Step = SkillStep | WhileLoopStep | ForEachStep;
 
 export type WhileLoopStep = {
   type: "while-loop";
@@ -48,18 +61,6 @@ export type ForEachStep = {
   as: string;
   steps: Step[];
 };
-
-/**
- * Schema for a conditional step - branches execution based on a condition.
- */
-export const ConditionalStepSchema: z.core.$ZodType<ConditionalStep> = z.object({
-  type: z.literal("conditional"),
-  name: z.string().check(z.minLength(1)),
-  condition: z.string().check(z.minLength(1)),
-  // oxlint-disable-next-line unicorn/no-thenable -- "then" is a conditional branch name, not a Promise thenable
-  then: z.array(z.lazy((): z.core.$ZodType<Step> => StepSchema)),
-  else: z.optional(z.array(z.lazy((): z.core.$ZodType<Step> => StepSchema))),
-});
 
 /**
  * Schema for a while-loop step - repeats steps while a condition is true.
@@ -88,7 +89,6 @@ export const ForEachStepSchema: z.core.$ZodType<ForEachStep> = z.object({
  */
 export const StepSchema: z.core.$ZodType<Step> = z.union([
   SkillStepSchema,
-  ConditionalStepSchema,
   WhileLoopStepSchema,
   ForEachStepSchema,
 ]);

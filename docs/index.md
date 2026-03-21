@@ -4,7 +4,7 @@ layout: home
 hero:
   name: agent-loop-flow
   text: AI Agent Flow Orchestrator
-  tagline: Orchestrate skill flows with conditionals and loops, defined in JSONC files
+  tagline: Orchestrate skill flows with transitions and loops, defined in JSONC files
   actions:
     - theme: brand
       text: Getting Started
@@ -16,8 +16,8 @@ hero:
 features:
   - title: Sequential Execution
     details: Chain skills in order to build complex agent workflows.
-  - title: Conditional Branching
-    details: Route execution based on conditions and previous step results.
+  - title: Step Transitions
+    details: Route execution via next rules based on conditions and previous step results.
   - title: Loops
     details: Iterate with while-loops and for-each over dynamic data.
   - title: JSON Schema Validation
