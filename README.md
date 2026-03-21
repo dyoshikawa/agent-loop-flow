@@ -1,5 +1,8 @@
 # agent-loop-flow
 
+[![npm version](https://img.shields.io/npm/v/agent-loop-flow.svg)](https://www.npmjs.com/package/agent-loop-flow)
+[![license](https://img.shields.io/npm/l/agent-loop-flow.svg)](https://github.com/dyoshikawa-claw/agent-loop-flow/blob/main/LICENSE)
+
 AI coding agent utility CLI that orchestrates skill flows with conditionals and loops, defined in JSONC files.
 
 ## Overview
@@ -22,8 +25,19 @@ Define flows in JSONC files with support for:
 ### Install
 
 ```bash
-pnpm install
-pnpm build
+npm install -g agent-loop-flow
+```
+
+Or use with npx:
+
+```bash
+npx agent-loop-flow run my-flow.jsonc
+```
+
+For use as a library:
+
+```bash
+npm install agent-loop-flow
 ```
 
 ### Define a Flow
@@ -66,13 +80,13 @@ Create a `.jsonc` file (e.g., `my-flow.jsonc`):
 
 ```bash
 # Run a flow
-pnpm dev run my-flow.jsonc
+agent-loop-flow run my-flow.jsonc
 
 # Run with variables
-pnpm dev run my-flow.jsonc --var targetFile=src/app.ts
+agent-loop-flow run my-flow.jsonc --var targetFile=src/app.ts
 
 # Validate without executing
-pnpm dev validate my-flow.jsonc
+agent-loop-flow validate my-flow.jsonc
 ```
 
 ## Flow Definition
@@ -169,7 +183,7 @@ Variables can be defined at the flow level and overridden via CLI:
 ```
 
 ```bash
-pnpm dev run flow.jsonc --var targetFile=src/app.ts --var mode=lenient
+agent-loop-flow run flow.jsonc --var targetFile=src/app.ts --var mode=lenient
 ```
 
 ## Programmatic API

@@ -40,7 +40,9 @@
     "agent-loop-flow": "dist/cli/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "flow-schema.json",
+    "config-schema.json"
   ],
   "scripts": {
     "build": "tsup",
