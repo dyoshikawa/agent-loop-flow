@@ -17,15 +17,15 @@ Flows are defined in JSONC files. Each flow has a name, a default tool and model
 
 ## Step Types
 
-### Skill Step
+### Prompt Step
 
-Executes a single skill with a prompt. Supports `{{variable}}` interpolation and optional `next` transition rules.
+Executes a named prompt with a body text. Supports `{{variable}}` interpolation and optional `next` transition rules.
 
 ```jsonc
 {
-  "type": "skill",
-  "name": "analyze-code",
-  "skill": "code-analysis",
+  "type": "prompt",
+  "id": "analyze-code",
+  "name": "code-analysis",
   "prompt": "Analyze {{targetFile}}",
   // Optional overrides:
   "tool": "claude-agent",
@@ -36,30 +36,30 @@ Executes a single skill with a prompt. Supports `{{variable}}` interpolation and
 }
 ```
 
-| Field    | Type                   | Required | Description                                        |
-| -------- | ---------------------- | -------- | -------------------------------------------------- |
-| `type`   | `"skill"`              | Yes      | Step type                                          |
-| `name`   | `string`               | Yes      | Step name (used as jump target)                    |
-| `skill`  | `string`               | Yes      | Skill identifier                                   |
-| `prompt` | `string`               | Yes      | Prompt template (supports `{{var}}` interpolation) |
-| `tool`   | `string`               | No       | Override `defaultTool` for this step               |
-| `model`  | `string`               | No       | Override `defaultModel` for this step              |
-| `config` | `object`               | No       | Additional configuration                           |
-| `next`   | `string \| NextRule[]` | No       | Transition to another step (see below)             |
+| Field    | Type                   | Required | Description                                         |
+| -------- | ---------------------- | -------- | --------------------------------------------------- |
+| `type`   | `"prompt"`             | Yes      | Step type                                           |
+| `id`     | `string`               | Yes      | Step identifier (used as jump target in `next`)     |
+| `name`   | `string`               | Yes      | Invocation name                                     |
+| `prompt` | `string`               | Yes      | Prompt body text (supports `{{var}}` interpolation) |
+| `tool`   | `string`               | No       | Override `defaultTool` for this step                |
+| `model`  | `string`               | No       | Override `defaultModel` for this step               |
+| `config` | `object`               | No       | Additional configuration                            |
+| `next`   | `string \| NextRule[]` | No       | Transition to another step (see below)              |
 
 ### Transition Rules (`next`)
 
-The `next` field on a skill step controls which step executes after it. If omitted, the engine falls through to the next step in array order.
+The `next` field on a prompt step controls which step executes after it. If omitted, the engine falls through to the next step in array order.
 
 #### Unconditional jump
 
-Set `next` to a step name string to always jump there:
+Set `next` to a step id string to always jump there:
 
 ```jsonc
 {
-  "type": "skill",
-  "name": "step-a",
-  "skill": "s",
+  "type": "prompt",
+  "id": "step-a",
+  "name": "s",
   "prompt": "do A",
   "next": "step-c", // always skip to step-c
 }
@@ -71,9 +71,9 @@ Set `next` to an array of rule objects. Each rule has an optional `condition` an
 
 ```jsonc
 {
-  "type": "skill",
-  "name": "analyze",
-  "skill": "analyzer",
+  "type": "prompt",
+  "id": "analyze",
+  "name": "analyzer",
   "prompt": "Analyze code",
   "next": [
     { "condition": "hasIssues", "step": "fix-issues" },
@@ -85,7 +85,7 @@ Set `next` to an array of rule objects. Each rule has an optional `condition` an
 | Field       | Type     | Required | Description                      |
 | ----------- | -------- | -------- | -------------------------------- |
 | `condition` | `string` | No       | Condition expression (see below) |
-| `step`      | `string` | Yes      | Target step name                 |
+| `step`      | `string` | Yes      | Target step id                   |
 
 If no rule matches and there is no default rule, the engine falls through to the next step in array order.
 
@@ -104,7 +104,7 @@ Repeats steps while a condition is true.
 ```jsonc
 {
   "type": "while-loop",
-  "name": "retry-loop",
+  "id": "retry-loop",
   "condition": "shouldRetry",
   "maxIterations": 5,
   "steps": [
@@ -116,7 +116,7 @@ Repeats steps while a condition is true.
 | Field           | Type           | Required | Description                 |
 | --------------- | -------------- | -------- | --------------------------- |
 | `type`          | `"while-loop"` | Yes      | Step type                   |
-| `name`          | `string`       | Yes      | Step name                   |
+| `id`            | `string`       | Yes      | Step identifier             |
 | `condition`     | `string`       | Yes      | Condition expression        |
 | `maxIterations` | `number`       | No       | Safety limit (default: 100) |
 | `steps`         | `Step[]`       | Yes      | Steps to repeat             |
@@ -128,14 +128,14 @@ Iterates over items in a variable.
 ```jsonc
 {
   "type": "for-each",
-  "name": "process-files",
+  "id": "process-files",
   "items": "fileList",
   "as": "currentFile",
   "steps": [
     {
-      "type": "skill",
-      "name": "process",
-      "skill": "processor",
+      "type": "prompt",
+      "id": "process",
+      "name": "processor",
       "prompt": "Process {{currentFile}}",
     },
   ],
@@ -145,7 +145,7 @@ Iterates over items in a variable.
 | Field   | Type         | Required | Description                              |
 | ------- | ------------ | -------- | ---------------------------------------- |
 | `type`  | `"for-each"` | Yes      | Step type                                |
-| `name`  | `string`     | Yes      | Step name                                |
+| `id`    | `string`     | Yes      | Step identifier                          |
 | `items` | `string`     | Yes      | Variable name containing the items array |
 | `as`    | `string`     | Yes      | Variable name for the current item       |
 | `steps` | `Step[]`     | Yes      | Steps to execute per item                |
@@ -173,27 +173,27 @@ Use `{{variableName}}` in prompts to interpolate values. Dot-path access is also
 
 ### Previous Result Variables
 
-Each skill step automatically has access to the previous step's result via template variables. This allows chaining step outputs into subsequent prompts.
+Each prompt step automatically has access to the previous step's result via template variables. This allows chaining step outputs into subsequent prompts.
 
 #### Dot-path access
 
-| Variable                      | Type      | Description                        |
-| ----------------------------- | --------- | ---------------------------------- |
-| `{{previousResult.output}}`   | `string`  | The output text from the last step |
-| `{{previousResult.success}}`  | `boolean` | Whether the last step succeeded    |
-| `{{previousResult.stepName}}` | `string`  | Name of the last step              |
-| `{{previousResult.skill}}`    | `string`  | Skill identifier of the last step  |
-| `{{previousResult.error}}`    | `string`  | Error message (if the step failed) |
+| Variable                     | Type      | Description                        |
+| ---------------------------- | --------- | ---------------------------------- |
+| `{{previousResult.output}}`  | `string`  | The output text from the last step |
+| `{{previousResult.success}}` | `boolean` | Whether the last step succeeded    |
+| `{{previousResult.stepId}}`  | `string`  | Id of the last step                |
+| `{{previousResult.name}}`    | `string`  | Invocation name of the last step   |
+| `{{previousResult.error}}`   | `string`  | Error message (if the step failed) |
 
 #### Flat camelCase variables
 
-| Variable                     | Type      | Description                           |
-| ---------------------------- | --------- | ------------------------------------- |
-| `{{previousResultOutput}}`   | `string`  | Same as `{{previousResult.output}}`   |
-| `{{previousResultSuccess}}`  | `boolean` | Same as `{{previousResult.success}}`  |
-| `{{previousResultStepName}}` | `string`  | Same as `{{previousResult.stepName}}` |
-| `{{previousResultSkill}}`    | `string`  | Same as `{{previousResult.skill}}`    |
-| `{{previousResultError}}`    | `string`  | Same as `{{previousResult.error}}`    |
+| Variable                    | Type      | Description                          |
+| --------------------------- | --------- | ------------------------------------ |
+| `{{previousResultOutput}}`  | `string`  | Same as `{{previousResult.output}}`  |
+| `{{previousResultSuccess}}` | `boolean` | Same as `{{previousResult.success}}` |
+| `{{previousResultStepId}}`  | `string`  | Same as `{{previousResult.stepId}}`  |
+| `{{previousResultName}}`    | `string`  | Same as `{{previousResult.name}}`    |
+| `{{previousResultError}}`   | `string`  | Same as `{{previousResult.error}}`   |
 
 If there is no previous step (e.g. the first step in a flow), the placeholders are left as-is.
 
@@ -203,15 +203,15 @@ If there is no previous step (e.g. the first step in a flow), the placeholders a
 {
   "steps": [
     {
-      "type": "skill",
-      "name": "analyze",
-      "skill": "code-analysis",
+      "type": "prompt",
+      "id": "analyze",
+      "name": "code-analysis",
       "prompt": "Analyze {{targetFile}} for issues",
     },
     {
-      "type": "skill",
-      "name": "fix",
-      "skill": "code-fix",
+      "type": "prompt",
+      "id": "fix",
+      "name": "code-fix",
       "prompt": "Fix the issues found in the analysis:\n{{previousResult.output}}",
     },
   ],
@@ -220,35 +220,35 @@ If there is no previous step (e.g. the first step in a flow), the placeholders a
 
 ## Branching Example
 
-Use `next` rules on skill steps for if/else style branching without nesting:
+Use `next` rules on prompt steps for if/else style branching without nesting:
 
 ```jsonc
 {
   "steps": [
     {
-      "type": "skill",
-      "name": "analyze",
-      "skill": "code-analysis",
+      "type": "prompt",
+      "id": "analyze",
+      "name": "code-analysis",
       "prompt": "Analyze {{targetFile}}",
       "next": [{ "condition": "hasIssues", "step": "fix-issues" }, { "step": "report-clean" }],
     },
     {
-      "type": "skill",
-      "name": "fix-issues",
-      "skill": "code-fix",
+      "type": "prompt",
+      "id": "fix-issues",
+      "name": "code-fix",
       "prompt": "Fix issues:\n{{previousResult.output}}",
       "next": "verify-fix",
     },
     {
-      "type": "skill",
-      "name": "verify-fix",
-      "skill": "test-runner",
+      "type": "prompt",
+      "id": "verify-fix",
+      "name": "test-runner",
       "prompt": "Run tests",
     },
     {
-      "type": "skill",
-      "name": "report-clean",
-      "skill": "reporter",
+      "type": "prompt",
+      "id": "report-clean",
+      "name": "reporter",
       "prompt": "All clean",
     },
   ],
@@ -270,6 +270,6 @@ Point `$schema` to `flow-schema.json` for IDE autocompletion and validation:
 See the `examples/` directory for sample flows:
 
 - `helloworld.jsonc` -- Minimal single-step flow
-- `simple-sequential.jsonc` -- Sequential skill chain
+- `simple-sequential.jsonc` -- Sequential prompt chain
 - `conditional-fix.jsonc` -- Conditional branching via next rules
 - `loop-processing.jsonc` -- For-each and while loops

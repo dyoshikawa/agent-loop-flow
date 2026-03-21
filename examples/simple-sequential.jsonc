@@ -1,9 +1,9 @@
 {
   // Simple sequential flow example
-  // Runs three skills in order: analyze -> refactor -> test
+  // Runs three prompts in order: analyze -> refactor -> test
   "$schema": "../flow-schema.json",
   "name": "simple-sequential",
-  "description": "A simple flow that runs skills in sequence",
+  "description": "A simple flow that runs prompts in sequence",
   "version": "1.0.0",
   "defaultTool": "opencode",
   "defaultModel": "github-copilot/claude-opus-4.6",
@@ -12,21 +12,21 @@
   },
   "steps": [
     {
-      "type": "skill",
-      "name": "analyze-code",
-      "skill": "code-analysis",
+      "type": "prompt",
+      "id": "analyze-code",
+      "name": "code-analysis",
       "prompt": "Analyze the code in {{targetFile}} and identify potential improvements",
     },
     {
-      "type": "skill",
-      "name": "refactor-code",
-      "skill": "code-refactor",
+      "type": "prompt",
+      "id": "refactor-code",
+      "name": "code-refactor",
       "prompt": "Refactor {{targetFile}} based on the analysis results:\n{{previousResult.output}}",
     },
     {
-      "type": "skill",
-      "name": "run-tests",
-      "skill": "test-runner",
+      "type": "prompt",
+      "id": "run-tests",
+      "name": "test-runner",
       "prompt": "Run tests to verify the refactoring of {{targetFile}}",
     },
   ],

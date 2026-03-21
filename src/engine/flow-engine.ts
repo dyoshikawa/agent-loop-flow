@@ -2,7 +2,7 @@ import type {
   FlowDefinition,
   ForEachStep,
   Next,
-  SkillStep,
+  PromptStep,
   Step,
   ToolType,
   WhileLoopStep,
@@ -11,11 +11,11 @@ import { formatError } from "../utils/error.js";
 import { logger } from "../utils/logger.js";
 
 /**
- * Result of executing a single skill step.
+ * Result of executing a single prompt step.
  */
-export type SkillResult = {
-  stepName: string;
-  skill: string;
+export type PromptResult = {
+  stepId: string;
+  name: string;
   output: string;
   success: boolean;
   error?: string;
@@ -27,17 +27,17 @@ export type SkillResult = {
 export type FlowResult = {
   flowName: string;
   success: boolean;
-  results: SkillResult[];
+  results: PromptResult[];
   variables: Record<string, unknown>;
   error?: string;
 };
 
 /**
- * Skill executor function signature.
- * Implementations should invoke the actual skill (e.g., via OpenCode SDK or Claude Agent SDK).
+ * Prompt executor function signature.
+ * Implementations should invoke the actual prompt (e.g., via OpenCode SDK or Claude Agent SDK).
  */
-export type SkillExecutor = (params: {
-  skill: string;
+export type PromptExecutor = (params: {
+  name: string;
   prompt: string;
   variables: Record<string, unknown>;
   config?: Record<string, unknown>;
@@ -52,7 +52,7 @@ export type SkillExecutor = (params: {
 export type ConditionEvaluator = (params: {
   condition: string;
   variables: Record<string, unknown>;
-  lastResult?: SkillResult;
+  lastResult?: PromptResult;
 }) => boolean;
 
 /**
@@ -121,7 +121,7 @@ export const defaultItemsResolver = ({
 const DEFAULT_MAX_ITERATIONS = 100;
 
 /**
- * Resolves the `next` field of a skill step to determine the target step name.
+ * Resolves the `next` field of a prompt step to determine the target step id.
  * Returns `undefined` when normal fall-through should occur.
  */
 const resolveNext = ({
@@ -133,7 +133,7 @@ const resolveNext = ({
   next: Next | undefined;
   conditionEvaluator: ConditionEvaluator;
   variables: Record<string, unknown>;
-  lastResult?: SkillResult;
+  lastResult?: PromptResult;
 }): string | undefined => {
   if (next === undefined) {
     return undefined;
@@ -165,31 +165,31 @@ const resolveNext = ({
  * Steps are a flat list with optional `next` rules controlling transitions.
  */
 export const createFlowEngine = ({
-  skillExecutor,
+  promptExecutor,
   conditionEvaluator = defaultConditionEvaluator,
   itemsResolver = defaultItemsResolver,
 }: {
-  skillExecutor: SkillExecutor;
+  promptExecutor: PromptExecutor;
   conditionEvaluator?: ConditionEvaluator;
   itemsResolver?: (params: { items: string; variables: Record<string, unknown> }) => unknown[];
 }) => {
-  const executeSkillStep = async ({
+  const executePromptStep = async ({
     step,
     variables,
     lastResult,
     defaultTool,
     defaultModel,
   }: {
-    step: SkillStep;
+    step: PromptStep;
     variables: Record<string, unknown>;
-    lastResult?: SkillResult;
+    lastResult?: PromptResult;
     defaultTool: ToolType;
     defaultModel: string;
-  }): Promise<SkillResult> => {
+  }): Promise<PromptResult> => {
     const tool = step.tool ?? defaultTool;
     const model = step.model ?? defaultModel;
     logger.info(
-      `Executing skill step: ${step.name} (skill: ${step.skill}, tool: ${tool}, model: ${model})`,
+      `Executing prompt step: ${step.id} (name: ${step.name}, tool: ${tool}, model: ${model})`,
     );
 
     // Inject previousResult into variables for prompt template interpolation.
@@ -201,8 +201,8 @@ export const createFlowEngine = ({
     if (lastResult) {
       templateVariables["previousResultOutput"] = lastResult.output;
       templateVariables["previousResultSuccess"] = lastResult.success;
-      templateVariables["previousResultStepName"] = lastResult.stepName;
-      templateVariables["previousResultSkill"] = lastResult.skill;
+      templateVariables["previousResultStepId"] = lastResult.stepId;
+      templateVariables["previousResultName"] = lastResult.name;
       if (lastResult.error !== undefined) {
         templateVariables["previousResultError"] = lastResult.error;
       }
@@ -211,8 +211,8 @@ export const createFlowEngine = ({
       templateVariables["previousResult"] = {
         output: lastResult.output,
         success: lastResult.success,
-        stepName: lastResult.stepName,
-        skill: lastResult.skill,
+        stepId: lastResult.stepId,
+        name: lastResult.name,
         error: lastResult.error,
       };
     }
@@ -224,8 +224,8 @@ export const createFlowEngine = ({
     });
 
     try {
-      const { output, success } = await skillExecutor({
-        skill: step.skill,
+      const { output, success } = await promptExecutor({
+        name: step.name,
         prompt: interpolatedPrompt,
         variables,
         config: step.config,
@@ -233,21 +233,21 @@ export const createFlowEngine = ({
         model,
       });
 
-      const result: SkillResult = {
-        stepName: step.name,
-        skill: step.skill,
+      const result: PromptResult = {
+        stepId: step.id,
+        name: step.name,
         output,
         success,
       };
 
-      logger.info(`Step "${step.name}" completed: success=${String(success)}`);
+      logger.info(`Step "${step.id}" completed: success=${String(success)}`);
       return result;
     } catch (error) {
       const errorMessage = formatError(error);
-      logger.error(`Step "${step.name}" failed: ${errorMessage}`);
+      logger.error(`Step "${step.id}" failed: ${errorMessage}`);
       return {
-        stepName: step.name,
-        skill: step.skill,
+        stepId: step.id,
+        name: step.name,
         output: "",
         success: false,
         error: errorMessage,
@@ -264,16 +264,16 @@ export const createFlowEngine = ({
   }: {
     step: WhileLoopStep;
     variables: Record<string, unknown>;
-    lastResult?: SkillResult;
+    lastResult?: PromptResult;
     defaultTool: ToolType;
     defaultModel: string;
-  }): Promise<SkillResult[]> => {
+  }): Promise<PromptResult[]> => {
     const maxIterations = step.maxIterations ?? DEFAULT_MAX_ITERATIONS;
-    const results: SkillResult[] = [];
+    const results: PromptResult[] = [];
     let iteration = 0;
     let currentLastResult = lastResult;
 
-    logger.info(`Starting while-loop: ${step.name} (max: ${String(maxIterations)} iterations)`);
+    logger.info(`Starting while-loop: ${step.id} (max: ${String(maxIterations)} iterations)`);
 
     while (iteration < maxIterations) {
       const shouldContinue = conditionEvaluator({
@@ -284,12 +284,12 @@ export const createFlowEngine = ({
 
       if (!shouldContinue) {
         logger.info(
-          `While-loop "${step.name}" condition false after ${String(iteration)} iterations`,
+          `While-loop "${step.id}" condition false after ${String(iteration)} iterations`,
         );
         break;
       }
 
-      logger.info(`While-loop "${step.name}" iteration ${String(iteration + 1)}`);
+      logger.info(`While-loop "${step.id}" iteration ${String(iteration + 1)}`);
       const iterationResults = await executeSteps({
         steps: step.steps,
         variables,
@@ -304,7 +304,7 @@ export const createFlowEngine = ({
     }
 
     if (iteration >= maxIterations) {
-      logger.warn(`While-loop "${step.name}" reached max iterations (${String(maxIterations)})`);
+      logger.warn(`While-loop "${step.id}" reached max iterations (${String(maxIterations)})`);
     }
 
     return results;
@@ -319,18 +319,18 @@ export const createFlowEngine = ({
   }: {
     step: ForEachStep;
     variables: Record<string, unknown>;
-    lastResult?: SkillResult;
+    lastResult?: PromptResult;
     defaultTool: ToolType;
     defaultModel: string;
-  }): Promise<SkillResult[]> => {
+  }): Promise<PromptResult[]> => {
     const items = itemsResolver({ items: step.items, variables });
-    const results: SkillResult[] = [];
+    const results: PromptResult[] = [];
     let currentLastResult = lastResult;
 
-    logger.info(`Starting for-each: ${step.name} (${String(items.length)} items)`);
+    logger.info(`Starting for-each: ${step.id} (${String(items.length)} items)`);
 
     for (const [index, item] of items.entries()) {
-      logger.info(`For-each "${step.name}" item ${String(index + 1)}/${String(items.length)}`);
+      logger.info(`For-each "${step.id}" item ${String(index + 1)}/${String(items.length)}`);
 
       const iterationVariables = {
         ...variables,
@@ -356,9 +356,9 @@ export const createFlowEngine = ({
   /**
    * Executes a list of steps using the flat transition model.
    *
-   * Steps are indexed by position. After each skill step the engine checks
+   * Steps are indexed by position. After each prompt step the engine checks
    * the `next` field:
-   * - If `next` resolves to a step name, the engine jumps to that step.
+   * - If `next` resolves to a step id, the engine jumps to that step.
    * - If `next` is undefined / no rule matches, the engine falls through to the
    *   next step in array order.
    *
@@ -374,17 +374,17 @@ export const createFlowEngine = ({
   }: {
     steps: Step[];
     variables: Record<string, unknown>;
-    lastResult?: SkillResult;
+    lastResult?: PromptResult;
     defaultTool: ToolType;
     defaultModel: string;
-  }): Promise<SkillResult[]> => {
-    const results: SkillResult[] = [];
+  }): Promise<PromptResult[]> => {
+    const results: PromptResult[] = [];
     let currentLastResult = lastResult;
 
-    // Build name -> index map for jump resolution
-    const nameToIndex = new Map<string, number>();
+    // Build id -> index map for jump resolution
+    const idToIndex = new Map<string, number>();
     for (const [i, step] of steps.entries()) {
-      nameToIndex.set(step.name, i);
+      idToIndex.set(step.id, i);
     }
 
     let cursor = 0;
@@ -393,8 +393,8 @@ export const createFlowEngine = ({
       if (step === undefined) break;
 
       switch (step.type) {
-        case "skill": {
-          const result = await executeSkillStep({
+        case "prompt": {
+          const result = await executePromptStep({
             step,
             variables,
             lastResult: currentLastResult,
@@ -413,7 +413,7 @@ export const createFlowEngine = ({
           });
 
           if (target !== undefined) {
-            const targetIndex = nameToIndex.get(target);
+            const targetIndex = idToIndex.get(target);
             if (targetIndex !== undefined) {
               cursor = targetIndex;
               continue;

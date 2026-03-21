@@ -14,34 +14,34 @@
   "steps": [
     {
       "type": "for-each",
-      "name": "process-files",
+      "id": "process-files",
       "items": "files",
       "as": "currentFile",
       "steps": [
         {
-          "type": "skill",
-          "name": "lint-file",
-          "skill": "linter",
+          "type": "prompt",
+          "id": "lint-file",
+          "name": "linter",
           "prompt": "Lint the file {{currentFile}}",
         },
         {
-          "type": "skill",
-          "name": "format-file",
-          "skill": "formatter",
+          "type": "prompt",
+          "id": "format-file",
+          "name": "formatter",
           "prompt": "Format the file {{currentFile}}",
         },
       ],
     },
     {
       "type": "while-loop",
-      "name": "retry-loop",
+      "id": "retry-loop",
       "condition": "retryEnabled",
       "maxIterations": 3,
       "steps": [
         {
-          "type": "skill",
-          "name": "retry-check",
-          "skill": "test-runner",
+          "type": "prompt",
+          "id": "retry-check",
+          "name": "test-runner",
           "prompt": "Re-run failing tests",
         },
       ],

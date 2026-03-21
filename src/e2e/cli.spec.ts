@@ -189,9 +189,9 @@ describe("CLI E2E Tests", () => {
         defaultModel: "github-copilot/claude-opus-4.6",
         steps: [
           {
-            type: "skill",
-            name: "test-step",
-            skill: "test-skill",
+            type: "prompt",
+            id: "test-step",
+            name: "test-prompt",
             prompt: "Do something",
           },
         ],
@@ -214,9 +214,9 @@ describe("CLI E2E Tests", () => {
         },
         steps: [
           {
-            type: "skill",
-            name: "greet",
-            skill: "greeter",
+            type: "prompt",
+            id: "greet",
+            name: "greeter",
             prompt: "Say {{greeting}} to the world",
           },
         ],
@@ -239,22 +239,22 @@ describe("CLI E2E Tests", () => {
         },
         steps: [
           {
-            type: "skill",
-            name: "check",
-            skill: "checker",
+            type: "prompt",
+            id: "check",
+            name: "checker",
             prompt: "Check state",
             next: [{ condition: "enabled", step: "run-if-enabled" }, { step: "skip-if-disabled" }],
           },
           {
-            type: "skill",
-            name: "run-if-enabled",
-            skill: "worker",
+            type: "prompt",
+            id: "run-if-enabled",
+            name: "worker",
             prompt: "Do work",
           },
           {
-            type: "skill",
-            name: "skip-if-disabled",
-            skill: "reporter",
+            type: "prompt",
+            id: "skip-if-disabled",
+            name: "reporter",
             prompt: "Report skipped",
           },
         ],
@@ -278,14 +278,14 @@ describe("CLI E2E Tests", () => {
         steps: [
           {
             type: "for-each",
-            name: "process-items",
+            id: "process-items",
             items: "items",
             as: "item",
             steps: [
               {
-                type: "skill",
-                name: "process-item",
-                skill: "processor",
+                type: "prompt",
+                id: "process-item",
+                name: "processor",
                 prompt: "Process {{item}}",
               },
             ],
@@ -311,14 +311,14 @@ describe("CLI E2E Tests", () => {
         steps: [
           {
             type: "while-loop",
-            name: "retry-loop",
+            id: "retry-loop",
             condition: "shouldLoop",
             maxIterations: 3,
             steps: [
               {
-                type: "skill",
-                name: "retry-step",
-                skill: "retrier",
+                type: "prompt",
+                id: "retry-step",
+                name: "retrier",
                 prompt: "Retry the operation",
               },
             ],
@@ -392,7 +392,7 @@ describe("CLI E2E Tests", () => {
         steps: [
           {
             type: "unknown-type",
-            name: "bad-step",
+            id: "bad-step",
           },
         ],
       });

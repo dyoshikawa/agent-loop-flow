@@ -14,9 +14,9 @@ describe("parseFlowContent", () => {
       defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
-          type: "skill",
-          name: "step-1",
-          skill: "test-skill",
+          type: "prompt",
+          id: "step-1",
+          name: "test-prompt",
           prompt: "test prompt",
         },
       ],
@@ -27,7 +27,7 @@ describe("parseFlowContent", () => {
     expect(result.defaultTool).toBe("opencode");
     expect(result.defaultModel).toBe("github-copilot/claude-opus-4.6");
     expect(result.steps).toHaveLength(1);
-    expect(result.steps[0]?.type).toBe("skill");
+    expect(result.steps[0]?.type).toBe("prompt");
   });
 
   it("parses JSONC with comments", () => {
@@ -38,9 +38,9 @@ describe("parseFlowContent", () => {
       "defaultModel": "github-copilot/claude-opus-4.6",
       "steps": [
         {
-          "type": "skill",
-          "name": "step-1",
-          "skill": "my-skill",
+          "type": "prompt",
+          "id": "step-1",
+          "name": "my-prompt",
           "prompt": "do something"
         }
       ]
@@ -57,9 +57,9 @@ describe("parseFlowContent", () => {
       "defaultModel": "github-copilot/claude-opus-4.6",
       "steps": [
         {
-          "type": "skill",
-          "name": "step-1",
-          "skill": "my-skill",
+          "type": "prompt",
+          "id": "step-1",
+          "name": "my-prompt",
           "prompt": "do something",
         },
       ],
@@ -79,9 +79,9 @@ describe("parseFlowContent", () => {
       variables: { key: "value" },
       steps: [
         {
-          type: "skill",
-          name: "step-1",
-          skill: "test-skill",
+          type: "prompt",
+          id: "step-1",
+          name: "test-prompt",
           prompt: "test prompt",
           config: { timeout: 5000 },
         },
@@ -94,29 +94,29 @@ describe("parseFlowContent", () => {
     expect(result.variables).toEqual({ key: "value" });
   });
 
-  it("parses flow with skill step that has a next string", () => {
+  it("parses flow with prompt step that has a next string", () => {
     const content = JSON.stringify({
       name: "next-flow",
       defaultTool: "opencode",
       defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
-          type: "skill",
-          name: "step-a",
-          skill: "s1",
+          type: "prompt",
+          id: "step-a",
+          name: "s1",
           prompt: "p1",
           next: "step-c",
         },
         {
-          type: "skill",
-          name: "step-b",
-          skill: "s2",
+          type: "prompt",
+          id: "step-b",
+          name: "s2",
           prompt: "p2",
         },
         {
-          type: "skill",
-          name: "step-c",
-          skill: "s3",
+          type: "prompt",
+          id: "step-c",
+          name: "s3",
           prompt: "p3",
         },
       ],
@@ -125,35 +125,35 @@ describe("parseFlowContent", () => {
     const result = parseFlowContent({ content });
     expect(result.steps).toHaveLength(3);
     const firstStep = result.steps[0];
-    expect(firstStep?.type).toBe("skill");
-    if (firstStep?.type === "skill") {
+    expect(firstStep?.type).toBe("prompt");
+    if (firstStep?.type === "prompt") {
       expect(firstStep.next).toBe("step-c");
     }
   });
 
-  it("parses flow with skill step that has next rules array", () => {
+  it("parses flow with prompt step that has next rules array", () => {
     const content = JSON.stringify({
       name: "rules-flow",
       defaultTool: "opencode",
       defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
-          type: "skill",
-          name: "check",
-          skill: "checker",
+          type: "prompt",
+          id: "check",
+          name: "checker",
           prompt: "check something",
           next: [{ condition: "hasIssues", step: "fix" }, { step: "done" }],
         },
         {
-          type: "skill",
-          name: "fix",
-          skill: "fixer",
+          type: "prompt",
+          id: "fix",
+          name: "fixer",
           prompt: "fix it",
         },
         {
-          type: "skill",
-          name: "done",
-          skill: "reporter",
+          type: "prompt",
+          id: "done",
+          name: "reporter",
           prompt: "report done",
         },
       ],
@@ -161,8 +161,8 @@ describe("parseFlowContent", () => {
 
     const result = parseFlowContent({ content });
     const firstStep = result.steps[0];
-    expect(firstStep?.type).toBe("skill");
-    if (firstStep?.type === "skill") {
+    expect(firstStep?.type).toBe("prompt");
+    if (firstStep?.type === "prompt") {
       expect(Array.isArray(firstStep.next)).toBe(true);
     }
   });
@@ -175,14 +175,14 @@ describe("parseFlowContent", () => {
       steps: [
         {
           type: "while-loop",
-          name: "retry",
+          id: "retry",
           condition: "shouldRetry",
           maxIterations: 5,
           steps: [
             {
-              type: "skill",
-              name: "retry-step",
-              skill: "runner",
+              type: "prompt",
+              id: "retry-step",
+              name: "runner",
               prompt: "retry",
             },
           ],
@@ -202,14 +202,14 @@ describe("parseFlowContent", () => {
       steps: [
         {
           type: "for-each",
-          name: "process-items",
+          id: "process-items",
           items: "fileList",
           as: "file",
           steps: [
             {
-              type: "skill",
-              name: "process",
-              skill: "processor",
+              type: "prompt",
+              id: "process",
+              name: "processor",
               prompt: "process {{file}}",
             },
           ],
@@ -245,7 +245,7 @@ describe("parseFlowContent", () => {
       name: "bad-step",
       defaultTool: "opencode",
       defaultModel: "github-copilot/claude-opus-4.6",
-      steps: [{ type: "unknown", name: "x" }],
+      steps: [{ type: "unknown", id: "x" }],
     });
     expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
   });
@@ -258,10 +258,27 @@ describe("parseFlowContent", () => {
       steps: [
         {
           type: "conditional",
-          name: "check",
+          id: "check",
           condition: "someVar",
           // oxlint-disable-next-line unicorn/no-thenable -- testing old conditional step rejection
-          then: [{ type: "skill", name: "s", skill: "s", prompt: "p" }],
+          then: [{ type: "prompt", id: "s", name: "s", prompt: "p" }],
+        },
+      ],
+    });
+    expect(() => parseFlowContent({ content })).toThrow("Flow validation errors");
+  });
+
+  it("rejects the removed skill step type", () => {
+    const content = JSON.stringify({
+      name: "old-skill",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
+      steps: [
+        {
+          type: "skill",
+          name: "step-1",
+          skill: "test-skill",
+          prompt: "test prompt",
         },
       ],
     });
@@ -275,9 +292,9 @@ describe("parseFlowContent", () => {
       defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
-          type: "skill",
-          name: "step-1",
-          skill: "test-skill",
+          type: "prompt",
+          id: "step-1",
+          name: "test-prompt",
           prompt: "test prompt",
           tool: "claude-agent",
           model: "claude-sonnet-4-20250514",
@@ -287,8 +304,8 @@ describe("parseFlowContent", () => {
 
     const result = parseFlowContent({ content });
     const step = result.steps[0];
-    expect(step?.type).toBe("skill");
-    if (step?.type === "skill") {
+    expect(step?.type).toBe("prompt");
+    if (step?.type === "prompt") {
       expect(step.tool).toBe("claude-agent");
       expect(step.model).toBe("claude-sonnet-4-20250514");
     }
@@ -299,9 +316,9 @@ describe("parseFlowContent", () => {
       name: "missing-defaults",
       steps: [
         {
-          type: "skill",
-          name: "step-1",
-          skill: "test-skill",
+          type: "prompt",
+          id: "step-1",
+          name: "test-prompt",
           prompt: "test prompt",
         },
       ],
@@ -329,9 +346,9 @@ describe("parseFlowFile", () => {
       defaultModel: "github-copilot/claude-opus-4.6",
       steps: [
         {
-          type: "skill",
-          name: "step-1",
-          skill: "test-skill",
+          type: "prompt",
+          id: "step-1",
+          name: "test-prompt",
           prompt: "test prompt",
         },
       ],

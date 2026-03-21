@@ -6,7 +6,7 @@
 export {
   FlowDefinitionSchema,
   StepSchema,
-  SkillStepSchema,
+  PromptStepSchema,
   NextRuleSchema,
   NextSchema,
   ToolTypeSchema,
@@ -14,7 +14,7 @@ export {
 export type {
   FlowDefinition,
   Step,
-  SkillStep,
+  PromptStep,
   NextRule,
   Next,
   WhileLoopStep,
@@ -33,8 +33,8 @@ export {
   defaultItemsResolver,
 } from "./engine/flow-engine.js";
 export type {
-  SkillExecutor,
-  SkillResult,
+  PromptExecutor,
+  PromptResult,
   FlowResult,
   ConditionEvaluator,
 } from "./engine/flow-engine.js";

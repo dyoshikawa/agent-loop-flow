@@ -3,19 +3,19 @@
 [![npm version](https://img.shields.io/npm/v/agent-loop-flow.svg)](https://www.npmjs.com/package/agent-loop-flow)
 [![license](https://img.shields.io/npm/l/agent-loop-flow.svg)](https://github.com/dyoshikawa-claw/agent-loop-flow/blob/main/LICENSE)
 
-AI coding agent utility CLI that orchestrates skill flows with transitions and loops, defined in JSONC files.
+AI coding agent utility CLI that orchestrates prompt flows with transitions and loops, defined in JSONC files.
 
 ## Overview
 
-Agent-loop-flow lets you compose agent workflows by chaining skills:
+Agent-loop-flow lets you compose agent workflows by chaining prompts:
 
 ```
-skill A -> skill B -> skill C ...
+prompt A -> prompt B -> prompt C ...
 ```
 
 Define flows in JSONC files with support for:
 
-- **Sequential execution** -- run skills in order
+- **Sequential execution** -- run prompts in order
 - **Flat transition rules** -- route execution via `next` rules on steps (no nesting for if/else)
 - **Loops** -- while-loops and for-each iteration
 - **JSON Schema validation** -- validated flow definitions with IDE autocompletion
@@ -57,22 +57,22 @@ Create a `.jsonc` file (e.g., `my-flow.jsonc`):
   },
   "steps": [
     {
-      "type": "skill",
-      "name": "analyze",
-      "skill": "code-analysis",
+      "type": "prompt",
+      "id": "analyze",
+      "name": "code-analysis",
       "prompt": "Analyze {{targetFile}} for issues",
       "next": [{ "condition": "hasIssues", "step": "fix" }, { "step": "done" }],
     },
     {
-      "type": "skill",
-      "name": "fix",
-      "skill": "code-fix",
+      "type": "prompt",
+      "id": "fix",
+      "name": "code-fix",
       "prompt": "Fix issues found in {{targetFile}}:\n{{previousResult.output}}",
     },
     {
-      "type": "skill",
-      "name": "done",
-      "skill": "reporter",
+      "type": "prompt",
+      "id": "done",
+      "name": "reporter",
       "prompt": "Report that {{targetFile}} is clean",
     },
   ],
@@ -96,15 +96,15 @@ agent-loop-flow validate my-flow.jsonc
 
 ### Step Types
 
-#### Skill Step
+#### Prompt Step
 
-Executes a single skill with a prompt. Supports `{{variable}}` interpolation and optional `next` transition rules.
+Executes a named prompt with a body text. Supports `{{variable}}` interpolation and optional `next` transition rules.
 
 ```jsonc
 {
-  "type": "skill",
-  "name": "analyze-code",
-  "skill": "code-analysis",
+  "type": "prompt",
+  "id": "analyze-code",
+  "name": "code-analysis",
   "prompt": "Analyze {{targetFile}}",
   "next": "verify-step", // unconditional jump
 }
@@ -114,14 +114,14 @@ Executes a single skill with a prompt. Supports `{{variable}}` interpolation and
 
 The `next` field controls which step runs after the current one. It can be:
 
-- A **string** for an unconditional jump: `"next": "step-name"`
+- A **string** for an unconditional jump: `"next": "step-id"`
 - An **array of rules** for conditional branching:
 
 ```jsonc
 {
-  "type": "skill",
-  "name": "check",
-  "skill": "checker",
+  "type": "prompt",
+  "id": "check",
+  "name": "checker",
   "prompt": "Check code",
   "next": [
     { "condition": "hasIssues", "step": "fix-issues" },
@@ -147,7 +147,7 @@ Repeats steps while a condition is true.
 ```jsonc
 {
   "type": "while-loop",
-  "name": "retry-loop",
+  "id": "retry-loop",
   "condition": "shouldRetry",
   "maxIterations": 5,
   "steps": [
@@ -163,14 +163,14 @@ Iterates over items in a variable.
 ```jsonc
 {
   "type": "for-each",
-  "name": "process-files",
+  "id": "process-files",
   "items": "fileList",
   "as": "currentFile",
   "steps": [
     {
-      "type": "skill",
-      "name": "process",
-      "skill": "processor",
+      "type": "prompt",
+      "id": "process",
+      "name": "processor",
       "prompt": "Process {{currentFile}}",
     },
   ],
@@ -196,44 +196,44 @@ agent-loop-flow run flow.jsonc --var targetFile=src/app.ts --var mode=lenient
 
 #### Previous Result Variables
 
-Each skill step can reference the previous step's output using `{{previousResult.output}}` or the flat camelCase form `{{previousResultOutput}}`. All fields from the previous result are available:
+Each prompt step can reference the previous step's output using `{{previousResult.output}}` or the flat camelCase form `{{previousResultOutput}}`. All fields from the previous result are available:
 
 ```jsonc
 {
   "steps": [
     {
-      "type": "skill",
-      "name": "analyze",
-      "skill": "code-analysis",
+      "type": "prompt",
+      "id": "analyze",
+      "name": "code-analysis",
       "prompt": "Analyze {{targetFile}}",
     },
     {
-      "type": "skill",
-      "name": "fix",
-      "skill": "code-fix",
+      "type": "prompt",
+      "id": "fix",
+      "name": "code-fix",
       "prompt": "Fix the issues:\n{{previousResult.output}}",
     },
   ],
 }
 ```
 
-Available variables: `previousResult.output`, `previousResult.success`, `previousResult.stepName`, `previousResult.skill`, `previousResult.error` (and their flat camelCase equivalents like `previousResultOutput`).
+Available variables: `previousResult.output`, `previousResult.success`, `previousResult.stepId`, `previousResult.name`, `previousResult.error` (and their flat camelCase equivalents like `previousResultOutput`).
 
 ## Programmatic API
 
 ```typescript
 import { parseFlowFile, createFlowEngine } from "agent-loop-flow";
-import type { SkillExecutor } from "agent-loop-flow";
+import type { PromptExecutor } from "agent-loop-flow";
 
-// Define how skills are executed
-const skillExecutor: SkillExecutor = async ({ skill, prompt, variables }) => {
+// Define how prompts are executed
+const promptExecutor: PromptExecutor = async ({ name, prompt, variables }) => {
   // Integrate with OpenCode SDK, Claude Agent SDK, etc.
   return { output: "result", success: true };
 };
 
 // Parse and run a flow
 const flow = await parseFlowFile({ filePath: "my-flow.jsonc" });
-const engine = createFlowEngine({ skillExecutor });
+const engine = createFlowEngine({ promptExecutor });
 const result = await engine.executeFlow({ flow });
 
 console.log(result.success);
@@ -244,7 +244,7 @@ console.log(result.results);
 
 See the `examples/` directory for sample flow definitions:
 
-- `simple-sequential.jsonc` -- Basic skill chain
+- `simple-sequential.jsonc` -- Basic prompt chain
 - `conditional-fix.jsonc` -- Conditional branching via next rules
 - `loop-processing.jsonc` -- For-each and while loops
 

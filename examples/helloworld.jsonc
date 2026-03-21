@@ -6,9 +6,9 @@
   "defaultModel": "github-copilot/claude-opus-4.6",
   "steps": [
     {
-      "type": "skill",
-      "name": "create-helloworld",
-      "skill": "code-generator",
+      "type": "prompt",
+      "id": "create-helloworld",
+      "name": "code-generator",
       "prompt": "Create a file called stdout-helloworld.js in the current directory that prints 'Hello, World!' to stdout",
     },
   ],

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { Command } from "commander";
 
 import { createFlowEngine } from "../engine/flow-engine.js";
-import type { SkillExecutor } from "../engine/flow-engine.js";
+import type { PromptExecutor } from "../engine/flow-engine.js";
 import { parseFlowFile } from "../flow/flow-parser.js";
 import { formatError } from "../utils/error.js";
 import { logger } from "../utils/logger.js";
@@ -69,12 +69,12 @@ const spawnCliProcess = ({
 };
 
 /**
- * Skill executor that uses OpenCode CLI to run skills.
+ * Prompt executor that uses OpenCode CLI to run prompts.
  * Spawns `opencode run "<prompt>"` as a child process.
  */
-const createOpenCodeSkillExecutor = (options: { cwd?: string } = {}): SkillExecutor => {
-  return async ({ skill, prompt, variables, model }) => {
-    logger.info(`[Skill: ${skill}] Running via OpenCode CLI...`);
+const createOpenCodePromptExecutor = (options: { cwd?: string } = {}): PromptExecutor => {
+  return async ({ name, prompt, variables, model }) => {
+    logger.info(`[Prompt: ${name}] Running via OpenCode CLI...`);
 
     // Interpolate variables into prompt
     let interpolatedPrompt = prompt;
@@ -82,8 +82,8 @@ const createOpenCodeSkillExecutor = (options: { cwd?: string } = {}): SkillExecu
       interpolatedPrompt = interpolatedPrompt.replaceAll(`{{${key}}}`, String(value));
     }
 
-    // Add skill context to prompt
-    const fullPrompt = `[Skill: ${skill}]\n\n${interpolatedPrompt}`;
+    // Add prompt name context to prompt
+    const fullPrompt = `[Prompt: ${name}]\n\n${interpolatedPrompt}`;
 
     const args = ["run", fullPrompt];
     if (model) {
@@ -99,12 +99,12 @@ const createOpenCodeSkillExecutor = (options: { cwd?: string } = {}): SkillExecu
 };
 
 /**
- * Skill executor that uses Claude Agent CLI (claude) to run skills.
+ * Prompt executor that uses Claude Agent CLI (claude) to run prompts.
  * Spawns `claude --print "<prompt>"` as a child process.
  */
-const createClaudeAgentSkillExecutor = (options: { cwd?: string } = {}): SkillExecutor => {
-  return async ({ skill, prompt, variables, model }) => {
-    logger.info(`[Skill: ${skill}] Running via Claude Agent CLI...`);
+const createClaudeAgentPromptExecutor = (options: { cwd?: string } = {}): PromptExecutor => {
+  return async ({ name, prompt, variables, model }) => {
+    logger.info(`[Prompt: ${name}] Running via Claude Agent CLI...`);
 
     // Interpolate variables into prompt
     let interpolatedPrompt = prompt;
@@ -112,8 +112,8 @@ const createClaudeAgentSkillExecutor = (options: { cwd?: string } = {}): SkillEx
       interpolatedPrompt = interpolatedPrompt.replaceAll(`{{${key}}}`, String(value));
     }
 
-    // Add skill context to prompt
-    const fullPrompt = `[Skill: ${skill}]\n\n${interpolatedPrompt}`;
+    // Add prompt name context to prompt
+    const fullPrompt = `[Prompt: ${name}]\n\n${interpolatedPrompt}`;
 
     const args = ["--print", fullPrompt];
     if (model) {
@@ -129,11 +129,11 @@ const createClaudeAgentSkillExecutor = (options: { cwd?: string } = {}): SkillEx
 };
 
 /**
- * Skill executor that routes to the appropriate tool executor based on the tool parameter.
+ * Prompt executor that routes to the appropriate tool executor based on the tool parameter.
  */
-const createRoutingSkillExecutor = (options: { cwd?: string } = {}): SkillExecutor => {
-  const openCodeExecutor = createOpenCodeSkillExecutor(options);
-  const claudeAgentExecutor = createClaudeAgentSkillExecutor(options);
+const createRoutingPromptExecutor = (options: { cwd?: string } = {}): PromptExecutor => {
+  const openCodeExecutor = createOpenCodePromptExecutor(options);
+  const claudeAgentExecutor = createClaudeAgentPromptExecutor(options);
 
   return async (params) => {
     switch (params.tool) {
@@ -150,7 +150,9 @@ const createProgram = (): Command => {
 
   program
     .name("agent-loop-flow")
-    .description("AI coding agent utility CLI - orchestrate skill flows with transitions and loops")
+    .description(
+      "AI coding agent utility CLI - orchestrate prompt flows with transitions and loops",
+    )
     .version("0.1.0");
 
   program
@@ -197,8 +199,8 @@ const createProgram = (): Command => {
             }
           }
 
-          const executor = createRoutingSkillExecutor();
-          const engine = createFlowEngine({ skillExecutor: executor });
+          const executor = createRoutingPromptExecutor();
+          const engine = createFlowEngine({ promptExecutor: executor });
           const result = await engine.executeFlow({ flow, initialVariables });
 
           if (result.success) {

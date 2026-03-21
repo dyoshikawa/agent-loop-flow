@@ -59,13 +59,13 @@
           "properties": {
             "type": {
               "type": "string",
-              "const": "skill"
+              "const": "prompt"
             },
-            "name": {
+            "id": {
               "type": "string",
               "minLength": 1
             },
-            "skill": {
+            "name": {
               "type": "string",
               "minLength": 1
             },
@@ -114,7 +114,7 @@
               ]
             }
           },
-          "required": ["type", "name", "skill", "prompt"],
+          "required": ["type", "id", "name", "prompt"],
           "additionalProperties": false
         },
         {
@@ -124,7 +124,7 @@
               "type": "string",
               "const": "while-loop"
             },
-            "name": {
+            "id": {
               "type": "string",
               "minLength": 1
             },
@@ -143,7 +143,7 @@
               }
             }
           },
-          "required": ["type", "name", "condition", "steps"],
+          "required": ["type", "id", "condition", "steps"],
           "additionalProperties": false
         },
         {
@@ -153,7 +153,7 @@
               "type": "string",
               "const": "for-each"
             },
-            "name": {
+            "id": {
               "type": "string",
               "minLength": 1
             },
@@ -172,7 +172,7 @@
               }
             }
           },
-          "required": ["type", "name", "items", "as", "steps"],
+          "required": ["type", "id", "items", "as", "steps"],
           "additionalProperties": false
         }
       ]
@@ -180,5 +180,5 @@
   },
   "$id": "https://raw.githubusercontent.com/dyoshikawa-claw/agent-loop-flow/refs/heads/main/flow-schema.json",
   "title": "Agent Loop Flow Definition",
-  "description": "Schema for defining AI agent skill flows with transitions and loops"
+  "description": "Schema for defining AI agent prompt flows with transitions and loops"
 }

@@ -32,9 +32,9 @@ Create a `.jsonc` file (e.g., `my-flow.jsonc`):
   },
   "steps": [
     {
-      "type": "skill",
-      "name": "analyze",
-      "skill": "code-analysis",
+      "type": "prompt",
+      "id": "analyze",
+      "name": "code-analysis",
       "prompt": "Analyze {{targetFile}} for issues",
     },
   ],
@@ -73,15 +73,15 @@ Set the default tool in your flow definition with `defaultTool`, or override per
 
 ```typescript
 import { parseFlowFile, createFlowEngine } from "agent-loop-flow";
-import type { SkillExecutor } from "agent-loop-flow";
+import type { PromptExecutor } from "agent-loop-flow";
 
-const skillExecutor: SkillExecutor = async ({ skill, prompt, variables }) => {
+const promptExecutor: PromptExecutor = async ({ name, prompt, variables }) => {
   // Integrate with your preferred agent tool
   return { output: "result", success: true };
 };
 
 const flow = await parseFlowFile({ filePath: "my-flow.jsonc" });
-const engine = createFlowEngine({ skillExecutor });
+const engine = createFlowEngine({ promptExecutor });
 const result = await engine.executeFlow({ flow });
 
 console.log(result.success);

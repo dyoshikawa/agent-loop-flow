@@ -18,7 +18,7 @@ const jsonSchema = {
   $schema: "http://json-schema.org/draft-07/schema#",
   $id: "https://raw.githubusercontent.com/dyoshikawa-claw/agent-loop-flow/refs/heads/main/flow-schema.json",
   title: "Agent Loop Flow Definition",
-  description: "Schema for defining AI agent skill flows with transitions and loops",
+  description: "Schema for defining AI agent prompt flows with transitions and loops",
 };
 
 // Output to project root

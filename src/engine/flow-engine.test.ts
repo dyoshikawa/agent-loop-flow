@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-import type { FlowDefinition, SkillExecutor } from "../index.js";
+import type { FlowDefinition, PromptExecutor } from "../index.js";
 import {
   createFlowEngine,
   defaultConditionEvaluator,
@@ -8,26 +8,26 @@ import {
   interpolateTemplate,
 } from "./flow-engine.js";
 
-const createMockSkillExecutor = (
+const createMockPromptExecutor = (
   responses?: Record<string, { output: string; success: boolean }>,
-): SkillExecutor => {
+): PromptExecutor => {
   return vi.fn(
     async ({
-      skill,
+      name,
       prompt,
       _tool,
       _model,
     }: {
-      skill: string;
+      name: string;
       prompt: string;
       _tool?: string;
       _model?: string;
     }) => {
-      if (responses?.[skill]) {
-        return responses[skill];
+      if (responses?.[name]) {
+        return responses[name];
       }
       return {
-        output: `Executed ${skill}: ${prompt}`,
+        output: `Executed ${name}: ${prompt}`,
         success: true,
       };
     },
@@ -118,14 +118,14 @@ describe("defaultConditionEvaluator", () => {
       defaultConditionEvaluator({
         condition: "lastResult.success",
         variables: {},
-        lastResult: { stepName: "s", skill: "sk", output: "", success: true },
+        lastResult: { stepId: "s", name: "n", output: "", success: true },
       }),
     ).toBe(true);
     expect(
       defaultConditionEvaluator({
         condition: "lastResult.success",
         variables: {},
-        lastResult: { stepName: "s", skill: "sk", output: "", success: false },
+        lastResult: { stepId: "s", name: "n", output: "", success: false },
       }),
     ).toBe(false);
   });
@@ -135,14 +135,14 @@ describe("defaultConditionEvaluator", () => {
       defaultConditionEvaluator({
         condition: 'lastResult.output contains "error"',
         variables: {},
-        lastResult: { stepName: "s", skill: "sk", output: "found an error here", success: false },
+        lastResult: { stepId: "s", name: "n", output: "found an error here", success: false },
       }),
     ).toBe(true);
     expect(
       defaultConditionEvaluator({
         condition: 'lastResult.output contains "error"',
         variables: {},
-        lastResult: { stepName: "s", skill: "sk", output: "all good", success: true },
+        lastResult: { stepId: "s", name: "n", output: "all good", success: true },
       }),
     ).toBe(false);
   });
@@ -204,37 +204,37 @@ describe("defaultItemsResolver", () => {
 describe("createFlowEngine", () => {
   describe("sequential execution", () => {
     it("executes steps in order", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "test-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         steps: [
-          { type: "skill", name: "step-1", skill: "skill-a", prompt: "prompt-a" },
-          { type: "skill", name: "step-2", skill: "skill-b", prompt: "prompt-b" },
+          { type: "prompt", id: "step-1", name: "prompt-a", prompt: "prompt-a" },
+          { type: "prompt", id: "step-2", name: "prompt-b", prompt: "prompt-b" },
         ],
       };
 
       const result = await engine.executeFlow({ flow });
       expect(result.success).toBe(true);
       expect(result.results).toHaveLength(2);
-      expect(result.results[0]?.stepName).toBe("step-1");
-      expect(result.results[1]?.stepName).toBe("step-2");
+      expect(result.results[0]?.stepId).toBe("step-1");
+      expect(result.results[1]?.stepId).toBe("step-2");
       expect(executor).toHaveBeenCalledTimes(2);
     });
 
     it("interpolates variables in prompts", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "test-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         variables: { target: "index.ts" },
-        steps: [{ type: "skill", name: "step-1", skill: "analyzer", prompt: "Analyze {{target}}" }],
+        steps: [{ type: "prompt", id: "step-1", name: "analyzer", prompt: "Analyze {{target}}" }],
       };
 
       await engine.executeFlow({ flow });
@@ -244,15 +244,15 @@ describe("createFlowEngine", () => {
     });
 
     it("merges initial variables with flow variables", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "test-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         variables: { a: "from-flow", b: "from-flow" },
-        steps: [{ type: "skill", name: "step-1", skill: "s", prompt: "{{a}} {{b}}" }],
+        steps: [{ type: "prompt", id: "step-1", name: "s", prompt: "{{a}} {{b}}" }],
       };
 
       await engine.executeFlow({ flow, initialVariables: { b: "from-cli" } });
@@ -261,17 +261,17 @@ describe("createFlowEngine", () => {
       );
     });
 
-    it("reports failure when a skill fails", async () => {
-      const executor = createMockSkillExecutor({
-        "failing-skill": { output: "error", success: false },
+    it("reports failure when a prompt fails", async () => {
+      const executor = createMockPromptExecutor({
+        "failing-prompt": { output: "error", success: false },
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "test-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
-        steps: [{ type: "skill", name: "step-1", skill: "failing-skill", prompt: "p" }],
+        steps: [{ type: "prompt", id: "step-1", name: "failing-prompt", prompt: "p" }],
       };
 
       const result = await engine.executeFlow({ flow });
@@ -281,16 +281,16 @@ describe("createFlowEngine", () => {
 
     it("handles executor exceptions", async () => {
       // oxlint-disable-next-line unicorn/consistent-function-scoping -- test-local executor
-      const executor: SkillExecutor = async () => {
+      const executor: PromptExecutor = async () => {
         throw new Error("executor crashed");
       };
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "test-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
-        steps: [{ type: "skill", name: "step-1", skill: "s", prompt: "p" }],
+        steps: [{ type: "prompt", id: "step-1", name: "s", prompt: "p" }],
       };
 
       const result = await engine.executeFlow({ flow });
@@ -301,21 +301,21 @@ describe("createFlowEngine", () => {
 
   describe("previousResult template variables", () => {
     it("injects previousResult.output into the next step prompt via dot-path", async () => {
-      const executor = createMockSkillExecutor({
-        "step-a-skill": { output: "analysis result from step A", success: true },
+      const executor = createMockPromptExecutor({
+        "step-a-prompt": { output: "analysis result from step A", success: true },
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "prev-result-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         steps: [
-          { type: "skill", name: "step-a", skill: "step-a-skill", prompt: "analyze code" },
+          { type: "prompt", id: "step-a", name: "step-a-prompt", prompt: "analyze code" },
           {
-            type: "skill",
-            name: "step-b",
-            skill: "step-b-skill",
+            type: "prompt",
+            id: "step-b",
+            name: "step-b-prompt",
             prompt: "Fix issues based on: {{previousResult.output}}",
           },
         ],
@@ -330,21 +330,21 @@ describe("createFlowEngine", () => {
     });
 
     it("injects previousResultOutput flat camelCase variable", async () => {
-      const executor = createMockSkillExecutor({
+      const executor = createMockPromptExecutor({
         analyze: { output: "found 3 bugs", success: true },
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "flat-var-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         steps: [
-          { type: "skill", name: "step-1", skill: "analyze", prompt: "analyze code" },
+          { type: "prompt", id: "step-1", name: "analyze", prompt: "analyze code" },
           {
-            type: "skill",
-            name: "step-2",
-            skill: "fix",
+            type: "prompt",
+            id: "step-2",
+            name: "fix",
             prompt: "Fix: {{previousResultOutput}}",
           },
         ],
@@ -357,21 +357,21 @@ describe("createFlowEngine", () => {
     });
 
     it("injects previousResult.success as a template variable", async () => {
-      const executor = createMockSkillExecutor({
+      const executor = createMockPromptExecutor({
         analyze: { output: "done", success: true },
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "success-var-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         steps: [
-          { type: "skill", name: "step-1", skill: "analyze", prompt: "analyze" },
+          { type: "prompt", id: "step-1", name: "analyze", prompt: "analyze" },
           {
-            type: "skill",
-            name: "step-2",
-            skill: "report",
+            type: "prompt",
+            id: "step-2",
+            name: "report",
             prompt: "Previous succeeded: {{previousResult.success}}",
           },
         ],
@@ -383,36 +383,36 @@ describe("createFlowEngine", () => {
       );
     });
 
-    it("injects previousResultStepName and previousResultSkill", async () => {
-      const executor = createMockSkillExecutor({
+    it("injects previousResultStepId and previousResultName", async () => {
+      const executor = createMockPromptExecutor({
         analyzer: { output: "ok", success: true },
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "metadata-var-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         steps: [
-          { type: "skill", name: "analyze-step", skill: "analyzer", prompt: "analyze" },
+          { type: "prompt", id: "analyze-step", name: "analyzer", prompt: "analyze" },
           {
-            type: "skill",
-            name: "step-2",
-            skill: "reporter",
-            prompt: "Step: {{previousResult.stepName}}, Skill: {{previousResult.skill}}",
+            type: "prompt",
+            id: "step-2",
+            name: "reporter",
+            prompt: "Step: {{previousResult.stepId}}, Name: {{previousResult.name}}",
           },
         ],
       };
 
       await engine.executeFlow({ flow });
       expect(executor).toHaveBeenCalledWith(
-        expect.objectContaining({ prompt: "Step: analyze-step, Skill: analyzer" }),
+        expect.objectContaining({ prompt: "Step: analyze-step, Name: analyzer" }),
       );
     });
 
     it("keeps previousResult placeholders when there is no previous step", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "no-prev-flow",
@@ -420,9 +420,9 @@ describe("createFlowEngine", () => {
         defaultModel: "test-model",
         steps: [
           {
-            type: "skill",
-            name: "step-1",
-            skill: "s",
+            type: "prompt",
+            id: "step-1",
+            name: "s",
             prompt: "No previous: {{previousResult.output}}",
           },
         ],
@@ -435,10 +435,10 @@ describe("createFlowEngine", () => {
     });
 
     it("threads previousResult through next-rule branches", async () => {
-      const executor = createMockSkillExecutor({
+      const executor = createMockPromptExecutor({
         analyze: { output: "issues found", success: true },
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "next-prev-flow",
@@ -447,22 +447,22 @@ describe("createFlowEngine", () => {
         variables: { enabled: true },
         steps: [
           {
-            type: "skill",
-            name: "step-1",
-            skill: "analyze",
+            type: "prompt",
+            id: "step-1",
+            name: "analyze",
             prompt: "analyze",
             next: [{ condition: "enabled", step: "fix" }],
           },
           {
-            type: "skill",
-            name: "skipped",
-            skill: "noop",
+            type: "prompt",
+            id: "skipped",
+            name: "noop",
             prompt: "should not run",
           },
           {
-            type: "skill",
-            name: "fix",
-            skill: "fixer",
+            type: "prompt",
+            id: "fix",
+            name: "fixer",
             prompt: "Fix based on: {{previousResult.output}}",
           },
         ],
@@ -476,11 +476,11 @@ describe("createFlowEngine", () => {
 
     it("threads previousResult through for-each loop iterations", async () => {
       let callIndex = 0;
-      const executor: SkillExecutor = vi.fn(async ({ prompt: _prompt }) => {
+      const executor: PromptExecutor = vi.fn(async ({ prompt: _prompt }) => {
         callIndex++;
         return { output: `result-${String(callIndex)}`, success: true };
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "foreach-prev-flow",
@@ -488,17 +488,17 @@ describe("createFlowEngine", () => {
         defaultModel: "test-model",
         variables: { files: ["a.ts", "b.ts"] },
         steps: [
-          { type: "skill", name: "init", skill: "init", prompt: "initialize" },
+          { type: "prompt", id: "init", name: "init", prompt: "initialize" },
           {
             type: "for-each",
-            name: "process",
+            id: "process",
             items: "files",
             as: "file",
             steps: [
               {
-                type: "skill",
-                name: "process-file",
-                skill: "processor",
+                type: "prompt",
+                id: "process-file",
+                name: "processor",
                 prompt: "Process {{file}} with context: {{previousResult.output}}",
               },
             ],
@@ -518,10 +518,10 @@ describe("createFlowEngine", () => {
     });
 
     it("does not mutate the original variables object", async () => {
-      const executor = createMockSkillExecutor({
+      const executor = createMockPromptExecutor({
         analyze: { output: "analysis", success: true },
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const variables = { target: "file.ts" };
       const flow: FlowDefinition = {
@@ -530,11 +530,11 @@ describe("createFlowEngine", () => {
         defaultModel: "test-model",
         variables,
         steps: [
-          { type: "skill", name: "step-1", skill: "analyze", prompt: "analyze {{target}}" },
+          { type: "prompt", id: "step-1", name: "analyze", prompt: "analyze {{target}}" },
           {
-            type: "skill",
-            name: "step-2",
-            skill: "fix",
+            type: "prompt",
+            id: "step-2",
+            name: "fix",
             prompt: "fix {{previousResult.output}}",
           },
         ],
@@ -549,17 +549,17 @@ describe("createFlowEngine", () => {
 
   describe("next-rule transitions", () => {
     it("jumps to target step when next is a string", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "jump-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         steps: [
-          { type: "skill", name: "step-a", skill: "sa", prompt: "a", next: "step-c" },
-          { type: "skill", name: "step-b", skill: "sb", prompt: "b" },
-          { type: "skill", name: "step-c", skill: "sc", prompt: "c" },
+          { type: "prompt", id: "step-a", name: "sa", prompt: "a", next: "step-c" },
+          { type: "prompt", id: "step-b", name: "sb", prompt: "b" },
+          { type: "prompt", id: "step-c", name: "sc", prompt: "c" },
         ],
       };
 
@@ -567,13 +567,13 @@ describe("createFlowEngine", () => {
       expect(result.success).toBe(true);
       // step-b should be skipped
       expect(result.results).toHaveLength(2);
-      expect(result.results[0]?.stepName).toBe("step-a");
-      expect(result.results[1]?.stepName).toBe("step-c");
+      expect(result.results[0]?.stepId).toBe("step-a");
+      expect(result.results[1]?.stepId).toBe("step-c");
     });
 
     it("evaluates condition rules and jumps to matching step", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "cond-jump-flow",
@@ -582,27 +582,27 @@ describe("createFlowEngine", () => {
         variables: { hasIssues: true },
         steps: [
           {
-            type: "skill",
-            name: "analyze",
-            skill: "analyzer",
+            type: "prompt",
+            id: "analyze",
+            name: "analyzer",
             prompt: "analyze",
             next: [{ condition: "hasIssues", step: "fix" }, { step: "done" }],
           },
-          { type: "skill", name: "fix", skill: "fixer", prompt: "fix" },
-          { type: "skill", name: "done", skill: "reporter", prompt: "done" },
+          { type: "prompt", id: "fix", name: "fixer", prompt: "fix" },
+          { type: "prompt", id: "done", name: "reporter", prompt: "done" },
         ],
       };
 
       const result = await engine.executeFlow({ flow });
       expect(result.results).toHaveLength(3);
-      expect(result.results[0]?.stepName).toBe("analyze");
-      expect(result.results[1]?.stepName).toBe("fix");
-      expect(result.results[2]?.stepName).toBe("done");
+      expect(result.results[0]?.stepId).toBe("analyze");
+      expect(result.results[1]?.stepId).toBe("fix");
+      expect(result.results[2]?.stepId).toBe("done");
     });
 
     it("jumps to default rule when no condition matches", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "default-rule-flow",
@@ -611,27 +611,27 @@ describe("createFlowEngine", () => {
         variables: { hasIssues: false },
         steps: [
           {
-            type: "skill",
-            name: "analyze",
-            skill: "analyzer",
+            type: "prompt",
+            id: "analyze",
+            name: "analyzer",
             prompt: "analyze",
             next: [{ condition: "hasIssues", step: "fix" }, { step: "done" }],
           },
-          { type: "skill", name: "fix", skill: "fixer", prompt: "fix" },
-          { type: "skill", name: "done", skill: "reporter", prompt: "done" },
+          { type: "prompt", id: "fix", name: "fixer", prompt: "fix" },
+          { type: "prompt", id: "done", name: "reporter", prompt: "done" },
         ],
       };
 
       const result = await engine.executeFlow({ flow });
       // Should skip fix and jump to done
       expect(result.results).toHaveLength(2);
-      expect(result.results[0]?.stepName).toBe("analyze");
-      expect(result.results[1]?.stepName).toBe("done");
+      expect(result.results[0]?.stepId).toBe("analyze");
+      expect(result.results[1]?.stepId).toBe("done");
     });
 
     it("falls through when no next rules match and no default", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "fallthrough-flow",
@@ -640,50 +640,50 @@ describe("createFlowEngine", () => {
         variables: {},
         steps: [
           {
-            type: "skill",
-            name: "step-a",
-            skill: "sa",
+            type: "prompt",
+            id: "step-a",
+            name: "sa",
             prompt: "a",
             next: [{ condition: "nonExistent", step: "step-c" }],
           },
-          { type: "skill", name: "step-b", skill: "sb", prompt: "b" },
-          { type: "skill", name: "step-c", skill: "sc", prompt: "c" },
+          { type: "prompt", id: "step-b", name: "sb", prompt: "b" },
+          { type: "prompt", id: "step-c", name: "sc", prompt: "c" },
         ],
       };
 
       const result = await engine.executeFlow({ flow });
       // No rule matched, so falls through to step-b, then step-c
       expect(result.results).toHaveLength(3);
-      expect(result.results[0]?.stepName).toBe("step-a");
-      expect(result.results[1]?.stepName).toBe("step-b");
-      expect(result.results[2]?.stepName).toBe("step-c");
+      expect(result.results[0]?.stepId).toBe("step-a");
+      expect(result.results[1]?.stepId).toBe("step-b");
+      expect(result.results[2]?.stepId).toBe("step-c");
     });
 
     it("falls through when next has no value", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "no-next-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         steps: [
-          { type: "skill", name: "step-a", skill: "sa", prompt: "a" },
-          { type: "skill", name: "step-b", skill: "sb", prompt: "b" },
+          { type: "prompt", id: "step-a", name: "sa", prompt: "a" },
+          { type: "prompt", id: "step-b", name: "sb", prompt: "b" },
         ],
       };
 
       const result = await engine.executeFlow({ flow });
       expect(result.results).toHaveLength(2);
-      expect(result.results[0]?.stepName).toBe("step-a");
-      expect(result.results[1]?.stepName).toBe("step-b");
+      expect(result.results[0]?.stepId).toBe("step-a");
+      expect(result.results[1]?.stepId).toBe("step-b");
     });
 
     it("uses lastResult in next-rule condition evaluation", async () => {
-      const executor = createMockSkillExecutor({
+      const executor = createMockPromptExecutor({
         checker: { output: "found an error in code", success: false },
       });
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "last-result-next-flow",
@@ -691,50 +691,50 @@ describe("createFlowEngine", () => {
         defaultModel: "test-model",
         steps: [
           {
-            type: "skill",
-            name: "check",
-            skill: "checker",
+            type: "prompt",
+            id: "check",
+            name: "checker",
             prompt: "check",
             next: [{ condition: "lastResult.success", step: "done" }, { step: "fix" }],
           },
-          { type: "skill", name: "fix", skill: "fixer", prompt: "fix" },
-          { type: "skill", name: "done", skill: "reporter", prompt: "done" },
+          { type: "prompt", id: "fix", name: "fixer", prompt: "fix" },
+          { type: "prompt", id: "done", name: "reporter", prompt: "done" },
         ],
       };
 
       const result = await engine.executeFlow({ flow });
       // lastResult.success is false, so should go to fix, not done
       expect(result.results).toHaveLength(3);
-      expect(result.results[0]?.stepName).toBe("check");
-      expect(result.results[1]?.stepName).toBe("fix");
-      expect(result.results[2]?.stepName).toBe("done");
+      expect(result.results[0]?.stepId).toBe("check");
+      expect(result.results[1]?.stepId).toBe("fix");
+      expect(result.results[2]?.stepId).toBe("done");
     });
 
     it("warns and falls through on unknown next target", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "unknown-target-flow",
         defaultTool: "opencode",
         defaultModel: "test-model",
         steps: [
-          { type: "skill", name: "step-a", skill: "sa", prompt: "a", next: "nonexistent" },
-          { type: "skill", name: "step-b", skill: "sb", prompt: "b" },
+          { type: "prompt", id: "step-a", name: "sa", prompt: "a", next: "nonexistent" },
+          { type: "prompt", id: "step-b", name: "sb", prompt: "b" },
         ],
       };
 
       const result = await engine.executeFlow({ flow });
       expect(result.results).toHaveLength(2);
-      expect(result.results[0]?.stepName).toBe("step-a");
-      expect(result.results[1]?.stepName).toBe("step-b");
+      expect(result.results[0]?.stepId).toBe("step-a");
+      expect(result.results[1]?.stepId).toBe("step-b");
     });
   });
 
   describe("while-loop execution", () => {
     it("loops while condition is true", async () => {
       let callCount = 0;
-      const executor: SkillExecutor = async ({ prompt: _prompt }) => {
+      const executor: PromptExecutor = async ({ prompt: _prompt }) => {
         callCount++;
         return { output: `call ${String(callCount)}`, success: true };
       };
@@ -744,7 +744,7 @@ describe("createFlowEngine", () => {
       condEval.mockReturnValueOnce(false);
 
       const engine = createFlowEngine({
-        skillExecutor: executor,
+        promptExecutor: executor,
         conditionEvaluator: condEval,
       });
 
@@ -755,10 +755,10 @@ describe("createFlowEngine", () => {
         steps: [
           {
             type: "while-loop",
-            name: "retry",
+            id: "retry",
             condition: "shouldRetry",
             maxIterations: 10,
-            steps: [{ type: "skill", name: "action", skill: "s", prompt: "p" }],
+            steps: [{ type: "prompt", id: "action", name: "s", prompt: "p" }],
           },
         ],
       };
@@ -769,12 +769,12 @@ describe("createFlowEngine", () => {
     });
 
     it("respects maxIterations limit", async () => {
-      const executor = createMockSkillExecutor();
+      const executor = createMockPromptExecutor();
       // oxlint-disable-next-line unicorn/consistent-function-scoping -- test-local evaluator
       const alwaysTrue = () => true;
 
       const engine = createFlowEngine({
-        skillExecutor: executor,
+        promptExecutor: executor,
         conditionEvaluator: alwaysTrue,
       });
 
@@ -785,10 +785,10 @@ describe("createFlowEngine", () => {
         steps: [
           {
             type: "while-loop",
-            name: "infinite",
+            id: "infinite",
             condition: "always",
             maxIterations: 3,
-            steps: [{ type: "skill", name: "action", skill: "s", prompt: "p" }],
+            steps: [{ type: "prompt", id: "action", name: "s", prompt: "p" }],
           },
         ],
       };
@@ -800,8 +800,8 @@ describe("createFlowEngine", () => {
 
   describe("for-each execution", () => {
     it("iterates over array items", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "foreach-flow",
@@ -811,10 +811,10 @@ describe("createFlowEngine", () => {
         steps: [
           {
             type: "for-each",
-            name: "process",
+            id: "process",
             items: "files",
             as: "file",
-            steps: [{ type: "skill", name: "lint", skill: "linter", prompt: "lint {{file}}" }],
+            steps: [{ type: "prompt", id: "lint", name: "linter", prompt: "lint {{file}}" }],
           },
         ],
       };
@@ -828,8 +828,8 @@ describe("createFlowEngine", () => {
     });
 
     it("handles empty items", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "foreach-flow",
@@ -839,10 +839,10 @@ describe("createFlowEngine", () => {
         steps: [
           {
             type: "for-each",
-            name: "process",
+            id: "process",
             items: "missing",
             as: "item",
-            steps: [{ type: "skill", name: "action", skill: "s", prompt: "p" }],
+            steps: [{ type: "prompt", id: "action", name: "s", prompt: "p" }],
           },
         ],
       };
@@ -855,14 +855,14 @@ describe("createFlowEngine", () => {
 
   describe("tool and model passing", () => {
     it("passes default tool and model to executor", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "tool-test",
         defaultTool: "opencode",
         defaultModel: "test-model",
-        steps: [{ type: "skill", name: "step-1", skill: "s", prompt: "p" }],
+        steps: [{ type: "prompt", id: "step-1", name: "s", prompt: "p" }],
       };
 
       await engine.executeFlow({ flow });
@@ -872,8 +872,8 @@ describe("createFlowEngine", () => {
     });
 
     it("passes step-level tool/model overrides to executor", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "override-test",
@@ -881,9 +881,9 @@ describe("createFlowEngine", () => {
         defaultModel: "default-model",
         steps: [
           {
-            type: "skill",
-            name: "step-1",
-            skill: "s",
+            type: "prompt",
+            id: "step-1",
+            name: "s",
             prompt: "p",
             tool: "claude-agent",
             model: "custom-model",
@@ -898,14 +898,14 @@ describe("createFlowEngine", () => {
     });
 
     it("falls back to defaults when step has no overrides", async () => {
-      const executor = createMockSkillExecutor();
-      const engine = createFlowEngine({ skillExecutor: executor });
+      const executor = createMockPromptExecutor();
+      const engine = createFlowEngine({ promptExecutor: executor });
 
       const flow: FlowDefinition = {
         name: "fallback-test",
         defaultTool: "claude-agent",
         defaultModel: "default-model",
-        steps: [{ type: "skill", name: "step-1", skill: "s", prompt: "p" }],
+        steps: [{ type: "prompt", id: "step-1", name: "s", prompt: "p" }],
       };
 
       await engine.executeFlow({ flow });
