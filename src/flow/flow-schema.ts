@@ -51,6 +51,7 @@ export type WhileLoopStep = {
   name: string;
   condition: string;
   maxIterations?: number | undefined;
+  exitCondition?: string | undefined;
   steps: Step[];
 };
 
@@ -59,28 +60,38 @@ export type ForEachStep = {
   name: string;
   items: string;
   as: string;
+  maxIterations?: number | undefined;
+  exitCondition?: string | undefined;
   steps: Step[];
 };
 
 /**
  * Schema for a while-loop step - repeats steps while a condition is true.
+ * `exitCondition` is evaluated after each iteration body completes.
+ * When it evaluates to true the loop breaks immediately (like a "break-when").
  */
 export const WhileLoopStepSchema: z.core.$ZodType<WhileLoopStep> = z.object({
   type: z.literal("while-loop"),
   name: z.string().check(z.minLength(1)),
   condition: z.string().check(z.minLength(1)),
   maxIterations: z.optional(z.number().check(z.minimum(1))),
+  exitCondition: z.optional(z.string().check(z.minLength(1))),
   steps: z.array(z.lazy((): z.core.$ZodType<Step> => StepSchema)),
 });
 
 /**
  * Schema for a for-each step - iterates over a list of items.
+ * `maxIterations` caps the number of items processed.
+ * `exitCondition` is evaluated after each iteration body completes.
+ * When it evaluates to true the loop breaks immediately.
  */
 export const ForEachStepSchema: z.core.$ZodType<ForEachStep> = z.object({
   type: z.literal("for-each"),
   name: z.string().check(z.minLength(1)),
   items: z.string().check(z.minLength(1)),
   as: z.string().check(z.minLength(1)),
+  maxIterations: z.optional(z.number().check(z.minimum(1))),
+  exitCondition: z.optional(z.string().check(z.minLength(1))),
   steps: z.array(z.lazy((): z.core.$ZodType<Step> => StepSchema)),
 });
 

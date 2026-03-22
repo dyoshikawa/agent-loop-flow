@@ -333,6 +333,73 @@ describe("CLI E2E Tests", () => {
       expect(stdout).toContain("while-loop-test");
       expect(stdout).toContain("Dry run mode");
     });
+
+    it("should handle a while-loop with exitCondition", async () => {
+      const flowPath = await writeFlowFile(tmpRelative, "while-exit.jsonc", {
+        name: "while-exit-test",
+        version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
+        variables: {
+          shouldRetry: true,
+        },
+        steps: [
+          {
+            type: "while-loop",
+            name: "retry-loop",
+            condition: "shouldRetry",
+            maxIterations: 5,
+            exitCondition: "lastResult.success",
+            steps: [
+              {
+                type: "skill",
+                name: "retry-step",
+                skill: "retrier",
+                prompt: "Retry the operation",
+              },
+            ],
+          },
+        ],
+      });
+
+      const { stdout, exitCode } = await runCli(["validate", flowPath]);
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("while-exit-test");
+    });
+
+    it("should handle a for-each with maxIterations and exitCondition", async () => {
+      const flowPath = await writeFlowFile(tmpRelative, "foreach-exit.jsonc", {
+        name: "foreach-exit-test",
+        version: "1.0.0",
+        defaultTool: "opencode",
+        defaultModel: "github-copilot/claude-opus-4.6",
+        variables: {
+          items: ["a", "b", "c", "d", "e"],
+        },
+        steps: [
+          {
+            type: "for-each",
+            name: "process-items",
+            items: "items",
+            as: "item",
+            maxIterations: 3,
+            exitCondition: "lastResult.success",
+            steps: [
+              {
+                type: "skill",
+                name: "process-item",
+                skill: "processor",
+                prompt: "Process {{item}}",
+              },
+            ],
+          },
+        ],
+      });
+
+      const { stdout, exitCode } = await runCli(["validate", flowPath]);
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("foreach-exit-test");
+    });
   });
 
   describe("error handling", () => {

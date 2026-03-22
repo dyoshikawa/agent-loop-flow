@@ -17,6 +17,8 @@
       "name": "process-files",
       "items": "files",
       "as": "currentFile",
+      // Stop early if a lint step fails
+      "exitCondition": "lastResult.success",
       "steps": [
         {
           "type": "skill",
@@ -37,6 +39,8 @@
       "name": "retry-loop",
       "condition": "retryEnabled",
       "maxIterations": 3,
+      // Break out of the retry loop once tests pass
+      "exitCondition": "lastResult.success",
       "steps": [
         {
           "type": "skill",

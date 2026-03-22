@@ -194,6 +194,39 @@ describe("parseFlowContent", () => {
     expect(result.steps[0]?.type).toBe("while-loop");
   });
 
+  it("parses while-loop with exitCondition", () => {
+    const content = JSON.stringify({
+      name: "loop-exit-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
+      steps: [
+        {
+          type: "while-loop",
+          name: "retry",
+          condition: "shouldRetry",
+          maxIterations: 5,
+          exitCondition: "lastResult.success",
+          steps: [
+            {
+              type: "skill",
+              name: "retry-step",
+              skill: "runner",
+              prompt: "retry",
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    const step = result.steps[0];
+    expect(step?.type).toBe("while-loop");
+    if (step?.type === "while-loop") {
+      expect(step.exitCondition).toBe("lastResult.success");
+      expect(step.maxIterations).toBe(5);
+    }
+  });
+
   it("parses flow with for-each step", () => {
     const content = JSON.stringify({
       name: "foreach-flow",
@@ -219,6 +252,40 @@ describe("parseFlowContent", () => {
 
     const result = parseFlowContent({ content });
     expect(result.steps[0]?.type).toBe("for-each");
+  });
+
+  it("parses for-each with maxIterations and exitCondition", () => {
+    const content = JSON.stringify({
+      name: "foreach-exit-flow",
+      defaultTool: "opencode",
+      defaultModel: "github-copilot/claude-opus-4.6",
+      steps: [
+        {
+          type: "for-each",
+          name: "process-items",
+          items: "fileList",
+          as: "file",
+          maxIterations: 10,
+          exitCondition: "lastResult.success",
+          steps: [
+            {
+              type: "skill",
+              name: "process",
+              skill: "processor",
+              prompt: "process {{file}}",
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = parseFlowContent({ content });
+    const step = result.steps[0];
+    expect(step?.type).toBe("for-each");
+    if (step?.type === "for-each") {
+      expect(step.maxIterations).toBe(10);
+      expect(step.exitCondition).toBe("lastResult.success");
+    }
   });
 
   it("throws on empty content", () => {
