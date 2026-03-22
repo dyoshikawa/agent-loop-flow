@@ -301,6 +301,21 @@ export const createFlowEngine = ({
 
       currentLastResult = iterationResults[iterationResults.length - 1] ?? currentLastResult;
       iteration++;
+
+      // Evaluate exitCondition after the iteration body completes
+      if (step.exitCondition !== undefined) {
+        const shouldExit = conditionEvaluator({
+          condition: step.exitCondition,
+          variables,
+          lastResult: currentLastResult,
+        });
+        if (shouldExit) {
+          logger.info(
+            `While-loop "${step.name}" exitCondition met after ${String(iteration)} iterations`,
+          );
+          break;
+        }
+      }
     }
 
     if (iteration >= maxIterations) {
@@ -323,11 +338,18 @@ export const createFlowEngine = ({
     defaultTool: ToolType;
     defaultModel: string;
   }): Promise<SkillResult[]> => {
-    const items = itemsResolver({ items: step.items, variables });
+    const allItems = itemsResolver({ items: step.items, variables });
+    const items =
+      step.maxIterations !== undefined ? allItems.slice(0, step.maxIterations) : allItems;
     const results: SkillResult[] = [];
     let currentLastResult = lastResult;
 
     logger.info(`Starting for-each: ${step.name} (${String(items.length)} items)`);
+    if (step.maxIterations !== undefined && allItems.length > items.length) {
+      logger.info(
+        `For-each "${step.name}" limited to ${String(step.maxIterations)} of ${String(allItems.length)} items by maxIterations`,
+      );
+    }
 
     for (const [index, item] of items.entries()) {
       logger.info(`For-each "${step.name}" item ${String(index + 1)}/${String(items.length)}`);
@@ -348,6 +370,19 @@ export const createFlowEngine = ({
       results.push(...iterationResults);
 
       currentLastResult = iterationResults[iterationResults.length - 1] ?? currentLastResult;
+
+      // Evaluate exitCondition after the iteration body completes
+      if (step.exitCondition !== undefined) {
+        const shouldExit = conditionEvaluator({
+          condition: step.exitCondition,
+          variables: iterationVariables,
+          lastResult: currentLastResult,
+        });
+        if (shouldExit) {
+          logger.info(`For-each "${step.name}" exitCondition met after ${String(index + 1)} items`);
+          break;
+        }
+      }
     }
 
     return results;

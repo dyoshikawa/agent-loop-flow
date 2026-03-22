@@ -36,16 +36,16 @@ Executes a single skill with a prompt. Supports <code v-pre>{{variable}}</code> 
 }
 ```
 
-| Field    | Type                   | Required | Description                                        |
-| -------- | ---------------------- | -------- | -------------------------------------------------- |
-| `type`   | `"skill"`              | Yes      | Step type                                          |
-| `name`   | `string`               | Yes      | Step name (used as jump target)                    |
-| `skill`  | `string`               | Yes      | Skill identifier                                   |
+| Field    | Type                   | Required | Description                                                         |
+| -------- | ---------------------- | -------- | ------------------------------------------------------------------- |
+| `type`   | `"skill"`              | Yes      | Step type                                                           |
+| `name`   | `string`               | Yes      | Step name (used as jump target)                                     |
+| `skill`  | `string`               | Yes      | Skill identifier                                                    |
 | `prompt` | `string`               | Yes      | Prompt template (supports <code v-pre>{{var}}</code> interpolation) |
-| `tool`   | `string`               | No       | Override `defaultTool` for this step               |
-| `model`  | `string`               | No       | Override `defaultModel` for this step              |
-| `config` | `object`               | No       | Additional configuration                           |
-| `next`   | `string \| NextRule[]` | No       | Transition to another step (see below)             |
+| `tool`   | `string`               | No       | Override `defaultTool` for this step                                |
+| `model`  | `string`               | No       | Override `defaultModel` for this step                               |
+| `config` | `object`               | No       | Additional configuration                                            |
+| `next`   | `string \| NextRule[]` | No       | Transition to another step (see below)                              |
 
 ### Transition Rules (`next`)
 
@@ -107,19 +107,23 @@ Repeats steps while a condition is true.
   "name": "retry-loop",
   "condition": "shouldRetry",
   "maxIterations": 5,
+  "exitCondition": "lastResult.success",
   "steps": [
     // steps to repeat
   ],
 }
 ```
 
-| Field           | Type           | Required | Description                 |
-| --------------- | -------------- | -------- | --------------------------- |
-| `type`          | `"while-loop"` | Yes      | Step type                   |
-| `name`          | `string`       | Yes      | Step name                   |
-| `condition`     | `string`       | Yes      | Condition expression        |
-| `maxIterations` | `number`       | No       | Safety limit (default: 100) |
-| `steps`         | `Step[]`       | Yes      | Steps to repeat             |
+| Field           | Type           | Required | Description                                                    |
+| --------------- | -------------- | -------- | -------------------------------------------------------------- |
+| `type`          | `"while-loop"` | Yes      | Step type                                                      |
+| `name`          | `string`       | Yes      | Step name                                                      |
+| `condition`     | `string`       | Yes      | Condition expression (checked **before** each iteration)       |
+| `maxIterations` | `number`       | No       | Safety limit (default: 100)                                    |
+| `exitCondition` | `string`       | No       | Condition checked **after** each iteration; breaks when truthy |
+| `steps`         | `Step[]`       | Yes      | Steps to repeat                                                |
+
+The `condition` is evaluated before each iteration starts; the loop stops when it becomes false. The optional `exitCondition` is evaluated after each iteration body completes -- when it becomes truthy the loop breaks immediately (like a "break-when"). Both use the same condition expression syntax.
 
 ### For-Each Loop
 
@@ -131,6 +135,8 @@ Iterates over items in a variable.
   "name": "process-files",
   "items": "fileList",
   "as": "currentFile",
+  "maxIterations": 10,
+  "exitCondition": "lastResult.success",
   "steps": [
     {
       "type": "skill",
@@ -142,13 +148,15 @@ Iterates over items in a variable.
 }
 ```
 
-| Field   | Type         | Required | Description                              |
-| ------- | ------------ | -------- | ---------------------------------------- |
-| `type`  | `"for-each"` | Yes      | Step type                                |
-| `name`  | `string`     | Yes      | Step name                                |
-| `items` | `string`     | Yes      | Variable name containing the items array |
-| `as`    | `string`     | Yes      | Variable name for the current item       |
-| `steps` | `Step[]`     | Yes      | Steps to execute per item                |
+| Field           | Type         | Required | Description                                                    |
+| --------------- | ------------ | -------- | -------------------------------------------------------------- |
+| `type`          | `"for-each"` | Yes      | Step type                                                      |
+| `name`          | `string`     | Yes      | Step name                                                      |
+| `items`         | `string`     | Yes      | Variable name containing the items array                       |
+| `as`            | `string`     | Yes      | Variable name for the current item                             |
+| `maxIterations` | `number`     | No       | Caps the number of items processed                             |
+| `exitCondition` | `string`     | No       | Condition checked **after** each iteration; breaks when truthy |
+| `steps`         | `Step[]`     | Yes      | Steps to execute per item                                      |
 
 The loop also sets <code v-pre>{{as_index}}</code> (e.g., <code v-pre>{{currentFile_index}}</code>) to the zero-based index.
 
@@ -177,8 +185,8 @@ Each skill step automatically has access to the previous step's result via templ
 
 #### Dot-path access
 
-| Variable                      | Type      | Description                        |
-| ----------------------------- | --------- | ---------------------------------- |
+| Variable                                       | Type      | Description                        |
+| ---------------------------------------------- | --------- | ---------------------------------- |
 | <code v-pre>{{previousResult.output}}</code>   | `string`  | The output text from the last step |
 | <code v-pre>{{previousResult.success}}</code>  | `boolean` | Whether the last step succeeded    |
 | <code v-pre>{{previousResult.stepName}}</code> | `string`  | Name of the last step              |
@@ -187,8 +195,8 @@ Each skill step automatically has access to the previous step's result via templ
 
 #### Flat camelCase variables
 
-| Variable                     | Type      | Description                           |
-| ---------------------------- | --------- | ------------------------------------- |
+| Variable                                      | Type      | Description                                            |
+| --------------------------------------------- | --------- | ------------------------------------------------------ |
 | <code v-pre>{{previousResultOutput}}</code>   | `string`  | Same as <code v-pre>{{previousResult.output}}</code>   |
 | <code v-pre>{{previousResultSuccess}}</code>  | `boolean` | Same as <code v-pre>{{previousResult.success}}</code>  |
 | <code v-pre>{{previousResultStepName}}</code> | `string`  | Same as <code v-pre>{{previousResult.stepName}}</code> |

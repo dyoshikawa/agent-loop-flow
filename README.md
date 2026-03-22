@@ -150,11 +150,14 @@ Repeats steps while a condition is true.
   "name": "retry-loop",
   "condition": "shouldRetry",
   "maxIterations": 5,
+  "exitCondition": "lastResult.success", // break when tests pass
   "steps": [
     // steps to repeat
   ],
 }
 ```
+
+The `condition` is checked before each iteration (loop stops when false). The optional `exitCondition` is checked after each iteration body completes -- when it evaluates to true the loop breaks immediately. `maxIterations` defaults to 100 if omitted.
 
 #### For-Each Loop
 
@@ -166,6 +169,8 @@ Iterates over items in a variable.
   "name": "process-files",
   "items": "fileList",
   "as": "currentFile",
+  "maxIterations": 10,
+  "exitCondition": "lastResult.success", // stop on first success
   "steps": [
     {
       "type": "skill",
@@ -176,6 +181,8 @@ Iterates over items in a variable.
   ],
 }
 ```
+
+The optional `maxIterations` caps the number of items processed. The optional `exitCondition` is checked after each iteration body completes -- when it evaluates to true the loop breaks immediately.
 
 ### Variables
 

@@ -136,6 +136,10 @@
               "type": "number",
               "minimum": 1
             },
+            "exitCondition": {
+              "type": "string",
+              "minLength": 1
+            },
             "steps": {
               "type": "array",
               "items": {
@@ -162,6 +166,14 @@
               "minLength": 1
             },
             "as": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maxIterations": {
+              "type": "number",
+              "minimum": 1
+            },
+            "exitCondition": {
               "type": "string",
               "minLength": 1
             },

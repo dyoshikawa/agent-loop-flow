@@ -796,6 +796,76 @@ describe("createFlowEngine", () => {
       const result = await engine.executeFlow({ flow });
       expect(result.results).toHaveLength(3);
     });
+
+    it("breaks on exitCondition after iteration body", async () => {
+      let callCount = 0;
+      const executor: SkillExecutor = async () => {
+        callCount++;
+        // Third call succeeds, triggering exitCondition
+        return { output: `call ${String(callCount)}`, success: callCount >= 3 };
+      };
+
+      const engine = createFlowEngine({
+        skillExecutor: executor,
+        conditionEvaluator: defaultConditionEvaluator,
+      });
+
+      const flow: FlowDefinition = {
+        name: "exit-cond-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
+        variables: { shouldRetry: true },
+        steps: [
+          {
+            type: "while-loop",
+            name: "retry",
+            condition: "shouldRetry",
+            maxIterations: 10,
+            exitCondition: "lastResult.success",
+            steps: [{ type: "skill", name: "action", skill: "s", prompt: "p" }],
+          },
+        ],
+      };
+
+      const result = await engine.executeFlow({ flow });
+      // Should run 3 iterations: first two fail, third succeeds and triggers exitCondition
+      expect(result.results).toHaveLength(3);
+      expect(result.results[2]?.success).toBe(true);
+    });
+
+    it("exitCondition does not prevent first iteration from completing", async () => {
+      // oxlint-disable-next-line unicorn/consistent-function-scoping -- test-local executor
+      const executor: SkillExecutor = async () => {
+        return { output: "done", success: true };
+      };
+
+      const engine = createFlowEngine({
+        skillExecutor: executor,
+        conditionEvaluator: defaultConditionEvaluator,
+      });
+
+      const flow: FlowDefinition = {
+        name: "exit-first-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
+        variables: { shouldRetry: true },
+        steps: [
+          {
+            type: "while-loop",
+            name: "retry",
+            condition: "shouldRetry",
+            maxIterations: 10,
+            exitCondition: "lastResult.success",
+            steps: [{ type: "skill", name: "action", skill: "s", prompt: "p" }],
+          },
+        ],
+      };
+
+      const result = await engine.executeFlow({ flow });
+      // exitCondition is true after first iteration, so only 1 result
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]?.success).toBe(true);
+    });
   });
 
   describe("for-each execution", () => {
@@ -850,6 +920,70 @@ describe("createFlowEngine", () => {
       const result = await engine.executeFlow({ flow });
       expect(result.success).toBe(true);
       expect(result.results).toHaveLength(0);
+    });
+
+    it("respects maxIterations on for-each", async () => {
+      const executor = createMockSkillExecutor();
+      const engine = createFlowEngine({ skillExecutor: executor });
+
+      const flow: FlowDefinition = {
+        name: "foreach-max-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
+        variables: { files: ["a.ts", "b.ts", "c.ts", "d.ts", "e.ts"] },
+        steps: [
+          {
+            type: "for-each",
+            name: "process",
+            items: "files",
+            as: "file",
+            maxIterations: 2,
+            steps: [{ type: "skill", name: "lint", skill: "linter", prompt: "lint {{file}}" }],
+          },
+        ],
+      };
+
+      const result = await engine.executeFlow({ flow });
+      expect(result.success).toBe(true);
+      // Only first 2 items should be processed
+      expect(result.results).toHaveLength(2);
+      expect(executor).toHaveBeenCalledWith(expect.objectContaining({ prompt: "lint a.ts" }));
+      expect(executor).toHaveBeenCalledWith(expect.objectContaining({ prompt: "lint b.ts" }));
+    });
+
+    it("breaks on exitCondition in for-each", async () => {
+      let callCount = 0;
+      const executor: SkillExecutor = async ({ prompt }) => {
+        callCount++;
+        // Fail on the second item to trigger exit
+        return { output: `processed ${prompt}`, success: callCount < 2 };
+      };
+
+      const engine = createFlowEngine({
+        skillExecutor: executor,
+        conditionEvaluator: defaultConditionEvaluator,
+      });
+
+      const flow: FlowDefinition = {
+        name: "foreach-exit-flow",
+        defaultTool: "opencode",
+        defaultModel: "test-model",
+        variables: { files: ["a.ts", "b.ts", "c.ts", "d.ts"] },
+        steps: [
+          {
+            type: "for-each",
+            name: "process",
+            items: "files",
+            as: "file",
+            exitCondition: 'lastResult.output contains "b.ts"',
+            steps: [{ type: "skill", name: "lint", skill: "linter", prompt: "lint {{file}}" }],
+          },
+        ],
+      };
+
+      const result = await engine.executeFlow({ flow });
+      // Should process a.ts and b.ts, then exit because b.ts output contains "b.ts"
+      expect(result.results).toHaveLength(2);
     });
   });
 
