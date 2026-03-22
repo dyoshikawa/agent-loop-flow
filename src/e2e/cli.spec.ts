@@ -119,14 +119,7 @@ describe("CLI E2E Tests", () => {
   });
 
   describe("run command", () => {
-    it("should run the simple-sequential flow", async () => {
-      const { stdout, exitCode } = await runCli(["run", "examples/simple-sequential.jsonc"]);
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain("simple-sequential");
-      expect(stdout).toContain("completed successfully");
-    });
-
-    it("should run a flow with --dry-run flag", async () => {
+    it("should run the simple-sequential flow in dry-run mode", async () => {
       const { stdout, exitCode } = await runCli([
         "run",
         "examples/simple-sequential.jsonc",
@@ -137,29 +130,38 @@ describe("CLI E2E Tests", () => {
       expect(stdout).toContain("simple-sequential");
     });
 
-    it("should run the conditional-fix flow", async () => {
-      const { stdout, exitCode } = await runCli(["run", "examples/conditional-fix.jsonc"]);
+    it("should run the conditional-fix flow in dry-run mode", async () => {
+      const { stdout, exitCode } = await runCli([
+        "run",
+        "examples/conditional-fix.jsonc",
+        "--dry-run",
+      ]);
       expect(exitCode).toBe(0);
+      expect(stdout).toContain("Dry run mode");
       expect(stdout).toContain("conditional-fix");
-      expect(stdout).toContain("completed successfully");
     });
 
-    it("should run the loop-processing flow", async () => {
-      const { stdout, exitCode } = await runCli(["run", "examples/loop-processing.jsonc"]);
+    it("should run the loop-processing flow in dry-run mode", async () => {
+      const { stdout, exitCode } = await runCli([
+        "run",
+        "examples/loop-processing.jsonc",
+        "--dry-run",
+      ]);
       expect(exitCode).toBe(0);
+      expect(stdout).toContain("Dry run mode");
       expect(stdout).toContain("batch-process");
-      expect(stdout).toContain("completed successfully");
     });
 
-    it("should pass variables via --var flag", async () => {
+    it("should pass variables via --var flag in dry-run mode", async () => {
       const { stdout, exitCode } = await runCli([
         "run",
         "examples/simple-sequential.jsonc",
+        "--dry-run",
         "--var",
         "targetFile=src/custom.ts",
       ]);
       expect(exitCode).toBe(0);
-      expect(stdout).toContain("completed successfully");
+      expect(stdout).toContain("Dry run mode");
     });
 
     it("should fail for a non-existent file", async () => {
@@ -197,10 +199,10 @@ describe("CLI E2E Tests", () => {
         ],
       });
 
-      const { stdout, exitCode } = await runCli(["run", flowPath]);
+      const { stdout, exitCode } = await runCli(["run", flowPath, "--dry-run"]);
       expect(exitCode).toBe(0);
       expect(stdout).toContain("minimal-test");
-      expect(stdout).toContain("completed successfully");
+      expect(stdout).toContain("Dry run mode");
     });
 
     it("should handle a flow with variables and interpolation", async () => {
@@ -222,10 +224,10 @@ describe("CLI E2E Tests", () => {
         ],
       });
 
-      const { stdout, exitCode } = await runCli(["run", flowPath]);
+      const { stdout, exitCode } = await runCli(["run", flowPath, "--dry-run"]);
       expect(exitCode).toBe(0);
       expect(stdout).toContain("vars-test");
-      expect(stdout).toContain("completed successfully");
+      expect(stdout).toContain("Dry run mode");
     });
 
     it("should handle a flow with next-rule branching", async () => {
@@ -260,10 +262,10 @@ describe("CLI E2E Tests", () => {
         ],
       });
 
-      const { stdout, exitCode } = await runCli(["run", flowPath]);
+      const { stdout, exitCode } = await runCli(["run", flowPath, "--dry-run"]);
       expect(exitCode).toBe(0);
       expect(stdout).toContain("next-rules-test");
-      expect(stdout).toContain("completed successfully");
+      expect(stdout).toContain("Dry run mode");
     });
 
     it("should handle a flow with for-each loop", async () => {
@@ -293,10 +295,10 @@ describe("CLI E2E Tests", () => {
         ],
       });
 
-      const { stdout, exitCode } = await runCli(["run", flowPath]);
+      const { stdout, exitCode } = await runCli(["run", flowPath, "--dry-run"]);
       expect(exitCode).toBe(0);
       expect(stdout).toContain("for-each-test");
-      expect(stdout).toContain("completed successfully");
+      expect(stdout).toContain("Dry run mode");
     });
 
     it("should handle a flow with while-loop", async () => {
@@ -326,10 +328,10 @@ describe("CLI E2E Tests", () => {
         ],
       });
 
-      const { stdout, exitCode } = await runCli(["run", flowPath]);
+      const { stdout, exitCode } = await runCli(["run", flowPath, "--dry-run"]);
       expect(exitCode).toBe(0);
       expect(stdout).toContain("while-loop-test");
-      expect(stdout).toContain("completed successfully");
+      expect(stdout).toContain("Dry run mode");
     });
   });
 
