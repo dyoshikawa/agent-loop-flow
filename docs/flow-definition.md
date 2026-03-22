@@ -19,7 +19,7 @@ Flows are defined in JSONC files. Each flow has a name, a default tool and model
 
 ### Skill Step
 
-Executes a single skill with a prompt. Supports `{{variable}}` interpolation and optional `next` transition rules.
+Executes a single skill with a prompt. Supports <code v-pre>{{variable}}</code> interpolation and optional `next` transition rules.
 
 ```jsonc
 {
@@ -41,7 +41,7 @@ Executes a single skill with a prompt. Supports `{{variable}}` interpolation and
 | `type`   | `"skill"`              | Yes      | Step type                                          |
 | `name`   | `string`               | Yes      | Step name (used as jump target)                    |
 | `skill`  | `string`               | Yes      | Skill identifier                                   |
-| `prompt` | `string`               | Yes      | Prompt template (supports `{{var}}` interpolation) |
+| `prompt` | `string`               | Yes      | Prompt template (supports <code v-pre>{{var}}</code> interpolation) |
 | `tool`   | `string`               | No       | Override `defaultTool` for this step               |
 | `model`  | `string`               | No       | Override `defaultModel` for this step              |
 | `config` | `object`               | No       | Additional configuration                           |
@@ -150,7 +150,7 @@ Iterates over items in a variable.
 | `as`    | `string`     | Yes      | Variable name for the current item       |
 | `steps` | `Step[]`     | Yes      | Steps to execute per item                |
 
-The loop also sets `{{as_index}}` (e.g., `{{currentFile_index}}`) to the zero-based index.
+The loop also sets <code v-pre>{{as_index}}</code> (e.g., <code v-pre>{{currentFile_index}}</code>) to the zero-based index.
 
 ## Variables
 
@@ -169,7 +169,7 @@ Variables can be defined at the flow level and overridden via CLI:
 pnpm dev run flow.jsonc --var targetFile=src/app.ts --var mode=lenient
 ```
 
-Use `{{variableName}}` in prompts to interpolate values. Dot-path access is also supported (e.g. `{{obj.key}}`).
+Use <code v-pre>{{variableName}}</code> in prompts to interpolate values. Dot-path access is also supported (e.g. <code v-pre>{{obj.key}}</code>).
 
 ### Previous Result Variables
 
@@ -179,21 +179,21 @@ Each skill step automatically has access to the previous step's result via templ
 
 | Variable                      | Type      | Description                        |
 | ----------------------------- | --------- | ---------------------------------- |
-| `{{previousResult.output}}`   | `string`  | The output text from the last step |
-| `{{previousResult.success}}`  | `boolean` | Whether the last step succeeded    |
-| `{{previousResult.stepName}}` | `string`  | Name of the last step              |
-| `{{previousResult.skill}}`    | `string`  | Skill identifier of the last step  |
-| `{{previousResult.error}}`    | `string`  | Error message (if the step failed) |
+| <code v-pre>{{previousResult.output}}</code>   | `string`  | The output text from the last step |
+| <code v-pre>{{previousResult.success}}</code>  | `boolean` | Whether the last step succeeded    |
+| <code v-pre>{{previousResult.stepName}}</code> | `string`  | Name of the last step              |
+| <code v-pre>{{previousResult.skill}}</code>    | `string`  | Skill identifier of the last step  |
+| <code v-pre>{{previousResult.error}}</code>    | `string`  | Error message (if the step failed) |
 
 #### Flat camelCase variables
 
 | Variable                     | Type      | Description                           |
 | ---------------------------- | --------- | ------------------------------------- |
-| `{{previousResultOutput}}`   | `string`  | Same as `{{previousResult.output}}`   |
-| `{{previousResultSuccess}}`  | `boolean` | Same as `{{previousResult.success}}`  |
-| `{{previousResultStepName}}` | `string`  | Same as `{{previousResult.stepName}}` |
-| `{{previousResultSkill}}`    | `string`  | Same as `{{previousResult.skill}}`    |
-| `{{previousResultError}}`    | `string`  | Same as `{{previousResult.error}}`    |
+| <code v-pre>{{previousResultOutput}}</code>   | `string`  | Same as <code v-pre>{{previousResult.output}}</code>   |
+| <code v-pre>{{previousResultSuccess}}</code>  | `boolean` | Same as <code v-pre>{{previousResult.success}}</code>  |
+| <code v-pre>{{previousResultStepName}}</code> | `string`  | Same as <code v-pre>{{previousResult.stepName}}</code> |
+| <code v-pre>{{previousResultSkill}}</code>    | `string`  | Same as <code v-pre>{{previousResult.skill}}</code>    |
+| <code v-pre>{{previousResultError}}</code>    | `string`  | Same as <code v-pre>{{previousResult.error}}</code>    |
 
 If there is no previous step (e.g. the first step in a flow), the placeholders are left as-is.
 
